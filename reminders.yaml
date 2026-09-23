@@ -1,0 +1,41 @@
+# Ese Daily Habit Tracker — sends phone alarms. Free on GitHub for public projects.
+# Started every minute by cron-job.org (see setup guide), plus a GitHub backup timer.
+name: Send alarms
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"   # backup, in case the minute timer ever stops
+
+concurrency:
+  group: send-alarms
+  cancel-in-progress: false
+
+permissions:
+  contents: write            # only used to keep this timer from being paused after 60 quiet days
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install
+        run: npm install --no-audit --no-fund --silent
+      - name: Send due alarms
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node alarm-sender.js
+      - name: Keep the timer awake
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -gt 3888000 ]; then
+            date -u > heartbeat.txt
+            git config user.name "alarm-bot"
+            git config user.email "alarm-bot@users.noreply.github.com"
+            git add heartbeat.txt
+            git commit -m "keep alarms awake" && git push || true
+          fi
