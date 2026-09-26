@@ -1,0 +1,2241 @@
+<!--
+  Ese Daily Habit Tracker
+  © 2026 Ekponbor Ese Laureta. All rights reserved.
+  This code and design may not be copied, redistributed or resold without permission.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://www.gstatic.com; frame-src https://*.firebaseapp.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<title>Ese Daily Habit Tracker</title>
+<meta name="description" content="Ese Daily Habit Tracker — habits, water, exercise, streaks, badges, a daily Bible verse and gentle encouragement. One day at a time." />
+<meta name="theme-color" content="#4361ee" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Habit Tracker" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%234361ee'/%3E%3Ctext x='50' y='70' font-size='62' font-family='Georgia,serif' fill='white' text-anchor='middle'%3EE%3C/text%3E%3C/svg%3E" />
+<!-- Optional, free: only used for the Suggestions box and the Admin page. See FIREBASE_SETUP.md for how to switch this on. Everything else in this app works with none of this. -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
+<style>
+  :root{
+    --green:#6c8cff; --green-soft:#eaefff; --green-deep:#3f5bd9;
+    --pink:#ec4899; --pink-soft:#fce7f3; --pink-deep:#be185d;
+    --warm1:#fbbf24; --warm2:#fde68a; --warm3:#86efac;
+    --bg:#f7f7fb; --surface:#ffffff; --text:#181a2a; --muted:#6b6f8a;
+    --line:#e6e6f0; --shadow:0 10px 30px rgba(108,140,255,.12);
+    --radius:20px;
+  }
+  html[data-theme="dark"]{
+    --green:#93a7ff; --green-soft:#1c2150; --green-deep:#7c93ff;
+    --pink:#f9a8d4; --pink-soft:#3a1830; --pink-deep:#f472b6;
+    --warm1:#b45309; --warm2:#78350f; --warm3:#14532d;
+    --bg:#0f0f1a; --surface:#181a2e; --text:#eceefb; --muted:#9a9dc0;
+    --line:#22302a; --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(ellipse 700px 500px at 15% -5%,rgba(251,191,36,.20),transparent 60%),
+    radial-gradient(ellipse 600px 500px at 100% 30%,rgba(134,239,172,.16),transparent 60%),var(--bg);color:var(--text);
+    position:relative;overflow-x:hidden;
+    font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;padding-bottom:92px;
+    padding-top:env(safe-area-inset-top,0px)}
+  a{color:var(--green)}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  header.top{position:sticky;top:0;z-index:20;background:color-mix(in oklab,var(--bg) 88%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+    padding-top:env(safe-area-inset-top,0px)}
+  .topin{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px}
+  .mono{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--green),var(--pink));color:#fff;display:grid;place-items:center;
+    animation:glow 3s ease-in-out infinite;
+    font-family:Georgia,serif;font-size:22px;font-weight:700}
+  .brand b{display:block;font-size:16px}
+  .brand span{display:block;font-size:12px;color:var(--muted)}
+  .spacer{flex:1}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+  h2{margin:0 0 4px;font-size:20px}
+  h3{margin:0 0 10px;font-size:15px;color:var(--pink-deep);font-weight:700;letter-spacing:.02em}
+  html[data-theme="dark"] h3{color:var(--pink)}
+  p.small,.small{font-size:13px;color:var(--muted);margin:4px 0}
+  .obdots{display:flex;gap:6px;margin-top:10px}
+  .obdot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .2s}
+  .obdot.on{background:var(--green)}
+  button{font:inherit;cursor:pointer}
+  .btn{border:1px solid var(--line);background:var(--surface);color:var(--text);
+    border-radius:14px;padding:12px 16px;min-height:46px;transition:transform .12s ease,border-color .15s ease}
+  .btn:hover{border-color:var(--green)}
+  .btn.primary{background:linear-gradient(135deg,var(--green),var(--green-deep));color:#fff;border-color:var(--green)}
+  .btn.ghost{background:transparent}
+  .btn.sm{min-height:36px;padding:7px 12px;border-radius:11px;font-size:13px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .page-head{margin:4px 2px 14px;animation:cardIn .35s ease both}
+  .page-head h1{margin:0;font-size:clamp(22px,4vw,30px);line-height:1.15}
+  .page-head p{margin:4px 0 0;opacity:.65;font-size:14px}
+  .card h2,.card h3{margin-top:0}
+  .card details summary{cursor:pointer;padding:6px 0}
+  .card ol{padding-left:20px;margin:6px 0}
+  .card ol li{margin:4px 0}
+  input,select,textarea{font:inherit;color:var(--text);background:var(--surface);
+    border:1px solid var(--line);border-radius:12px;padding:11px 12px;min-height:44px;width:100%}
+  textarea{min-height:80px}
+  label.f{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:760px){ .grid.two{grid-template-columns:1fr 1fr} .grid.three{grid-template-columns:repeat(3,1fr)} }
+  @media(min-width:1000px){ body{padding-bottom:24px} }
+  /* nav */
+  nav.bottom{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);
+    border-top:1px solid var(--line);display:flex;padding:6px 2px calc(4px + env(safe-area-inset-bottom))}
+  nav.bottom button{flex:1;border:0;background:none;color:var(--muted);padding:8px 1px;
+    display:grid;gap:2px;justify-items:center;font-size:10px;border-radius:12px}
+  nav.bottom button.on{color:var(--green);background:var(--green-soft)}
+  nav.bottom svg{width:22px;height:22px}
+  nav.side{display:none}
+  @media(min-width:1000px){
+    nav.bottom{display:none}
+    nav.side{display:flex;flex-direction:column;gap:6px;position:sticky;top:86px;align-self:start}
+    nav.side button{border:0;background:none;color:var(--muted);text-align:left;padding:11px 14px;border-radius:13px;display:flex;gap:10px;align-items:center}
+    nav.side button.on{color:var(--green);background:var(--green-soft);font-weight:600}
+    .shell{display:grid;grid-template-columns:210px 1fr;gap:22px;max-width:1100px;margin:0 auto;padding:16px}
+  }
+  /* habit */
+  .habit{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid var(--line);
+    border-radius:16px;margin-bottom:10px;background:var(--surface)}
+  .tick{width:46px;height:46px;min-width:46px;border-radius:50%;border:2px solid var(--line);
+    background:transparent;display:grid;place-items:center;font-size:20px;color:var(--muted);transition:transform .15s ease}
+  .tick.done{background:var(--green);border-color:var(--green);color:#fff;animation:pop .3s ease}
+  .hname{font-weight:600}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .chip{font-size:11px;background:var(--pink-soft);color:var(--pink-deep);padding:3px 9px;border-radius:999px}
+  html[data-theme="dark"] .chip{color:var(--pink)}
+  .dots{display:flex;gap:4px;margin-top:8px}
+  .dot{width:16px;height:16px;border-radius:5px;background:var(--line)}
+  .dot.d{background:var(--green)}
+  .dot.s{background:#f2c14e}
+  .ring{display:grid;place-items:center;width:150px;height:150px;border-radius:50%;margin:0 auto;transition:background 1s ease}
+  .ring .inner{width:116px;height:116px;border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center}
+  .ring b{font-size:28px;display:block}
+  .bars{display:flex;gap:8px;align-items:flex-end;height:80px;margin-top:8px}
+  .bars div{flex:1;background:var(--green-soft);border-radius:8px 8px 4px 4px;position:relative}
+  .bars div i{position:absolute;bottom:0;left:0;right:0;background:var(--green);border-radius:8px 8px 4px 4px;display:block;transition:height .5s ease}
+  .bars span{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted)}
+  .heat{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .heat div{aspect-ratio:1;border-radius:6px;background:var(--line);font-size:9px;color:var(--muted);display:grid;place-items:center}
+  .bar{height:14px;border-radius:999px;background:var(--line);overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--green);border-radius:999px;transition:width .5s ease}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;z-index:60;background:var(--green);
+    color:#fff;padding:12px 18px;border-radius:14px;box-shadow:var(--shadow);max-width:90%;text-align:center;
+    animation:rise .25s ease}
+  .list{max-height:320px;overflow:auto}
+  .item{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .hide{display:none!important}
+  footer{padding:24px 16px 40px;text-align:center;color:var(--muted);font-size:12px}
+  .switch{display:flex;gap:8px;flex-wrap:wrap}
+  .switch button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:8px 14px;font-size:13px}
+  .switch button.on{background:var(--green);border-color:var(--green);color:#fff}
+  .btn.sm.on{background:var(--green);border-color:var(--green);color:#fff}
+  dialog{border:0;border-radius:20px;padding:0;max-width:520px;width:92%;background:var(--surface);color:var(--text)}
+  dialog::backdrop{background:rgba(6,20,13,.5)}
+  .dlg{padding:20px}
+  /* mascot / level */
+  .mascot{font-size:42px;line-height:1;animation:float 3s ease-in-out infinite}
+  .level-pill{display:inline-block;background:var(--pink-soft);color:var(--pink-deep);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600}
+  html[data-theme="dark"] .level-pill{color:var(--pink)}
+  .xpbar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:8px}
+  .xpbar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--pink));transition:width .6s ease}
+  /* badges */
+  .badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+  .badge{border:1px solid var(--line);border-radius:16px;padding:12px 8px;text-align:center;background:var(--surface)}
+  .badge.locked{opacity:.35}
+  .badge .ic{font-size:26px}
+  /* verse */
+  .verse-card{background:linear-gradient(135deg,var(--green-soft),var(--pink-soft))}
+  .verse-text{font-family:Georgia,serif;font-size:18px;line-height:1.55;font-style:italic;margin:8px 0}
+  .vnum{font-size:11px;color:var(--muted);vertical-align:super;margin-right:3px}
+  .loadbar{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin:10px 0;position:relative}
+  .loadbar i{position:absolute;left:-30%;width:30%;height:100%;background:var(--green);animation:load 1.2s infinite}
+  /* confetti */
+  .confetti-piece{position:fixed;top:0;width:8px;height:14px;z-index:80;pointer-events:none;border-radius:2px;
+    animation:fall linear forwards}
+  @keyframes fall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(360deg);opacity:.3}}
+  @keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.28)}100%{transform:scale(1)}}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  @keyframes rise{from{transform:translate(-50%,10px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+  @keyframes load{0%{left:-30%}100%{left:100%}}
+  @keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,.35)}50%{box-shadow:0 0 0 6px rgba(236,72,153,0)}}
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,20px)}}
+  @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-25px,-15px)}}
+  body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(70px);opacity:.35;z-index:-1;pointer-events:none}
+  body::before{width:300px;height:300px;top:-70px;left:-70px;background:var(--warm1);animation:drift1 9s ease-in-out infinite}
+  body::after{width:260px;height:260px;bottom:60px;right:-60px;background:var(--warm3);animation:drift2 11s ease-in-out infinite}
+  .card{animation:cardIn .35s ease both}
+  .btn:active{transform:scale(.96)}
+  .tick:active{transform:scale(.9)}
+  nav.bottom button.on span, nav.side button.on span{animation:pop .3s ease}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}
+  }
+
+  /* ===== responsive + alive polish (added) ===== */
+  html{background:var(--bg);-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{min-height:100vh;min-height:100dvh;background-attachment:fixed}
+  :root{--border:var(--line)}
+  img,svg,video,canvas{max-width:100%}
+  h2,h3,.hname,.item,p{overflow-wrap:anywhere}
+  .card{transition:transform .25s ease,box-shadow .25s ease}
+  @media(hover:hover){ .card:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(108,140,255,.18)}
+    .btn:hover{transform:translateY(-1px)} .habit:hover{border-color:var(--green)} }
+  #main > .card:nth-child(2){animation-delay:.05s} #main > .card:nth-child(3){animation-delay:.1s}
+  #main > .card:nth-child(4){animation-delay:.15s} #main > .card:nth-child(5){animation-delay:.2s}
+  #main > .card:nth-child(n+6){animation-delay:.25s}
+  .habit{transition:border-color .2s ease,background .3s ease,transform .2s ease;animation:cardIn .35s ease both}
+  .habit:has(.tick.done){background:color-mix(in oklab,var(--green-soft) 55%,var(--surface))}
+  .habit:has(.tick.done) .hname{opacity:.75}
+  .tick.done{box-shadow:0 0 0 0 var(--green);animation:pop .3s ease,tickGlow .7s ease}
+  @keyframes tickGlow{0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--green) 60%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+  .btn,.tick,nav.bottom button,nav.side button,.switch button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  .btn.primary{box-shadow:0 6px 18px color-mix(in oklab,var(--green) 35%,transparent)}
+  .toast{bottom:calc(96px + env(safe-area-inset-bottom));width:max-content}
+  dialog{max-height:88vh;overflow:auto}
+  dialog[open]{animation:dlgIn .25s ease}
+  @keyframes dlgIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+  .btn[disabled]{opacity:.6;pointer-events:none}
+  /* phone: scrollable bottom menu, never squashed */
+  nav.bottom{overflow-x:auto;scrollbar-width:none;box-shadow:0 -6px 20px rgba(0,0,0,.05)}
+  nav.bottom::-webkit-scrollbar{display:none}
+  nav.bottom button{min-width:58px;min-height:52px;transition:background .2s ease,color .2s ease}
+  @media(max-width:420px){ .wrap{padding:12px} .card{padding:15px;border-radius:18px} .row > .btn{flex:1 1 auto}
+    .brand b{font-size:15px} .ring{width:132px;height:132px} .ring .inner{width:102px;height:102px} }
+  @media(max-width:340px){ .brand span{display:none} }
+  /* tablet + laptop: dashboard of cards */
+  @media(min-width:760px){
+    #main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:16px;align-items:start}
+    #main > *{margin-bottom:0;min-width:0}
+    #main > .page-head,#main > footer,#main > .card:has(.habit),#main > .card:has(form),#main > .card:has(.heat),#main > .card:has(.badge-grid),#main > .card:has(.list){grid-column:1/-1}
+    nav.bottom button{font-size:11px}
+  }
+  @media(min-width:1000px){ .shell{max-width:1240px;grid-template-columns:210px minmax(0,1fr)} .shell > main{min-width:0;max-width:none;width:100%;padding:0} .topin{max-width:1240px} nav.side button{transition:background .2s,color .2s,transform .15s} nav.side button:hover{transform:translateX(3px);color:var(--text)} }
+  @media(min-width:1400px){ .shell{max-width:1360px;grid-template-columns:230px minmax(0,1fr)} }
+
+  /* ===== friend features, celebrations, steps, welcome (build 17) ===== */
+  .hero-card{background:linear-gradient(135deg,color-mix(in oklab,var(--green) 16%,var(--surface)),color-mix(in oklab,var(--pink) 14%,var(--surface)))}
+  .wave{display:inline-block;transform-origin:70% 70%;animation:wave 2.4s ease-in-out infinite}
+  @keyframes wave{0%,60%,100%{transform:rotate(0)}10%,30%{transform:rotate(14deg)}20%{transform:rotate(-8deg)}40%{transform:rotate(-4deg)}50%{transform:rotate(10deg)}}
+  .streak-pill{background:color-mix(in oklab,#f97316 18%,var(--surface));color:#ea580c}
+  html[data-theme="dark"] .streak-pill{color:#fdba74}
+  .mood-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+  @media(min-width:520px){ .mood-row{grid-template-columns:repeat(6,1fr)} }
+  .mood-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:16px;border:1px solid var(--line);
+    background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;transition:transform .15s ease,border-color .15s ease;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  .mood-btn span{font-size:28px;line-height:1}
+  .mood-btn:active{transform:scale(.92)} .mood-btn:hover{border-color:var(--pink)}
+  .mood-done{animation:cardIn .35s ease both}
+  .mood-big{font-size:40px;line-height:1;margin-right:12px;animation:pop .45s ease}
+  .affirm-card{position:relative;overflow:hidden;background:linear-gradient(120deg,color-mix(in oklab,var(--pink) 22%,var(--surface)),color-mix(in oklab,var(--green) 22%,var(--surface)),color-mix(in oklab,var(--pink) 22%,var(--surface)));
+    background-size:220% 220%;animation:cardIn .35s ease both,shimmer 8s ease infinite}
+  @keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  .affirm-text{font-size:21px;font-weight:700;line-height:1.35;margin:6px 0 8px;letter-spacing:-.01em}
+  .affirm-card.said .affirm-text::after{content:" ✓";color:var(--green)}
+  .celebrate{text-align:center;padding:26px 20px 22px}
+  .celebrate h2{margin:8px 0 6px} .celebrate p{color:var(--muted);margin:0 0 16px;line-height:1.5}
+  .cele-emoji{font-size:64px;line-height:1;animation:celePop .7s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes celePop{0%{transform:scale(.2) rotate(-20deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+  .walk-card.on{border-color:var(--pink);box-shadow:0 0 0 3px color-mix(in oklab,var(--pink) 25%,transparent)}
+  .walk-live{font-size:16px;display:flex;align-items:center;gap:8px}
+  .pulse{width:12px;height:12px;border-radius:50%;background:var(--pink);display:inline-block;animation:pulse 1.2s ease infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--pink) 60%,transparent)}100%{box-shadow:0 0 0 12px transparent}}
+  .sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .sum-grid > div{background:color-mix(in oklab,var(--green) 8%,var(--surface));border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center}
+  .sum-grid b{display:block;font-size:18px} .sum-grid span{font-size:11px;color:var(--muted);line-height:1.3;display:block}
+  .welcome-hero{text-align:center;padding:18px 6px 8px}
+  .welcome-logo{width:76px;height:76px;margin:0 auto 14px;border-radius:24px;display:grid;place-items:center;font:800 40px/1 Georgia,serif;color:#fff;
+    background:linear-gradient(135deg,var(--green),var(--pink));box-shadow:0 14px 36px color-mix(in oklab,var(--pink) 40%,transparent);animation:float 3s ease-in-out infinite}
+  .welcome-hero h1{font-size:clamp(24px,6vw,34px);line-height:1.15;margin:0 0 10px;letter-spacing:-.02em;
+    background:linear-gradient(90deg,var(--green),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .welcome-hero > p{color:var(--muted);max-width:520px;margin:0 auto 16px;line-height:1.5}
+  .feature-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-width:560px;margin:0 auto 6px}
+  @media(min-width:620px){ .feature-grid{grid-template-columns:repeat(3,1fr)} }
+  .feature{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:var(--surface);border:1px solid var(--line);
+    font-size:13px;text-align:left;animation:cardIn .45s ease both}
+  .feature span{font-size:20px}
+  .ob-head{text-align:center} .ob-head .mascot{margin:0 auto 6px} .ob-head .obdots{justify-content:center}
+  .obdot{transition:background .3s ease,transform .3s ease} .obdot.on{transform:scale(1.15)}
+  #main > *{animation-fill-mode:both}
+  @media (prefers-reduced-motion: reduce){
+    .wave,.affirm-card,.cele-emoji,.pulse,.welcome-logo,.feature,.mood-big{animation:none!important}
+  }
+  .affirm-list{list-style:none;padding:0;margin:4px 0 12px;display:grid;gap:8px}
+  .affirm-list li{font-size:17px;font-weight:650;line-height:1.35;padding:8px 12px;border-radius:12px;background:color-mix(in oklab,var(--surface) 70%,transparent);
+    border-left:4px solid var(--pink);animation:cardIn .4s ease both}
+  .affirm-list li:nth-child(2){animation-delay:.06s} .affirm-list li:nth-child(3){animation-delay:.12s} .affirm-list li:nth-child(4){animation-delay:.18s} .affirm-list li:nth-child(n+5){animation-delay:.24s}
+  .affirm-list li.mine{border-left-color:var(--green);display:flex;align-items:center;gap:6px}
+  .affirm-list li.mine .x{order:3;margin-left:auto} .affirm-list li.mine::after{order:2}
+  .affirm-list .x{border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;padding:2px 6px;cursor:pointer}
+  .affirm-card.said .affirm-list li::after{content:" ✓";color:var(--green)}
+  .decl-add{margin-top:10px} .decl-add summary{cursor:pointer;color:var(--muted);font-size:13px}
+
+  /* ===== settings reorganization + sync UI (organization pass) ===== */
+  .settings-section{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.02em;
+    text-transform:uppercase;color:var(--muted);margin:22px 4px 8px}
+  .settings-section:first-of-type{margin-top:2px}
+  .settings-section span{font-size:15px}
+  .sync-status{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;
+    background:color-mix(in oklab,var(--muted) 14%,var(--surface));color:var(--muted);margin:2px 0 8px}
+  .sync-status.on{background:color-mix(in oklab,var(--green) 18%,var(--surface));color:var(--green-deep,var(--green))}
+  .sync-tabs{display:flex;gap:6px;margin:12px 0 10px}
+  .sync-tabs button{flex:1;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:10px;
+    padding:7px;font-size:13px;cursor:pointer}
+  .sync-tabs button.on{background:var(--green);border-color:var(--green);color:#fff}
+  .sync-steps{padding-left:20px;margin:0}
+  .sync-steps li{margin:6px 0}
+  #main > .settings-section{grid-column:1/-1}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="topin">
+    <div class="mono">E</div>
+    <div class="brand"><b>Ese Daily Habit Tracker</b><span>One day at a time</span></div>
+    <div class="spacer"></div>
+    <button class="btn sm ghost hide" id="installBtn">Install</button>
+    <button class="btn sm ghost" id="themeBtn">Theme</button>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="side" id="sideNav"></nav>
+  <main class="wrap" id="main"></main>
+</div>
+
+<nav class="bottom" id="bottomNav"></nav>
+
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+
+<script>
+"use strict";
+/* ---------- storage (everything lives on this device only, nothing is sent anywhere) ---------- */
+var KEY="ese.habit.tracker.v2";
+var DEFAULTS={
+  name:"", theme:"system", accent:"green",
+  habits:[], done:{}, skips:{}, counts:{},
+  water:{}, waterUnit:"glasses", waterGoal:8,
+  exercise:[], exerciseGoal:150,
+  favTips:[], lastOpen:"", seenMilestones:[],
+  reminders:true, reminderTime:"08:00", started:false,
+  points:0, badges:[], favVerses:[], deviceId:"",
+  hadEarlyBird:false, hadComeback:false, cleanSweeps:0, lastSweepDate:"",
+  moods:{}, affirmed:{}, affShift:{}, steps:{}, stepGoal:8000, celebrated:[], lastWeekShown:"", myDecl:[], showSteps:true, motionAllowed:false, ownerUid:""
+};
+var S = load();
+function load(){
+  try{ var raw=localStorage.getItem(KEY);
+    if(!raw){
+      var old=localStorage.getItem("ese.habit.tracker.v1");
+      if(old){ var o2=JSON.parse(old); for(var k in DEFAULTS){ if(!(k in o2)) o2[k]=DEFAULTS[k]; } return o2; }
+      return JSON.parse(JSON.stringify(DEFAULTS));
+    }
+    var o=JSON.parse(raw); for(var k2 in DEFAULTS){ if(!(k2 in o)) o[k2]=DEFAULTS[k2]; } return o;
+  }catch(e){ return JSON.parse(JSON.stringify(DEFAULTS)); }
+}
+function saveLocal(){ localStorage.setItem(KEY, JSON.stringify(S)); }
+/* ---------- alarms on the phone, even when the app is closed ----------
+   The phone registers with Firebase Cloud Messaging. A tiny server program runs every
+   minute and sends a short code (like "daily" or "h:abc123") to phones with an alarm due.
+   The server only knows TIMES and codes, never habit names: the phone itself turns the
+   code into the words you see, using text saved privately on the phone. */
+var FCM_VAPID_KEY="BEm6bLukb_TizT-JxO8pzXvEAAWWue65h3-msTc2W0jbB2lBn0GD45IZLBim67aXXHtBHxI1yxl2QCYNThcwxCg";
+var PUSH_ACTIVE=false, pushTimer=null, lastPushPlan="";
+function pushConfigured(){ return fbReady() && FCM_VAPID_KEY.indexOf("PASTE")<0 && !!(window.firebase && firebase.messaging) &&
+  ("serviceWorker" in navigator) && ("Notification" in window) && ("PushManager" in window); }
+function idbOpen(){ return new Promise(function(res,rej){ var r=indexedDB.open("ese-push",1);
+  r.onupgradeneeded=function(){ r.result.createObjectStore("kv"); }; r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; }); }
+function idbSet(k,v){ return idbOpen().then(function(db){ return new Promise(function(res){ var tx=db.transaction("kv","readwrite");
+  tx.objectStore("kv").put(v,k); tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); }; }); }).catch(function(){}); }
+function localToUtcMin(hhmm){ var p=String(hhmm||"").split(":"); if(p.length<2||isNaN(+p[0])||isNaN(+p[1])) return null;
+  var d=new Date(); d.setHours(+p[0],+p[1],0,0); return d.getUTCHours()*60+d.getUTCMinutes(); }
+function minusHour(hhmm){ var p=hhmm.split(":"), t=((+p[0])*60+(+p[1])-60+1440)%1440; return ("0"+Math.floor(t/60)).slice(-2)+":"+("0"+t%60).slice(-2); }
+function buildPushPlan(){
+  var slots={}, texts={}, nm=S.name? ", "+S.name : "";
+  function add(hhmm,tag,title,body){ var m=localToUtcMin(hhmm); if(m===null) return; var k=String(m);
+    slots[k]=slots[k]||[]; if(slots[k].indexOf(tag)<0 && slots[k].length<10) slots[k].push(tag); texts[tag]={title:title,body:body}; }
+  if(S.reminders){
+    add(S.reminderTime||"08:00","daily","Good day"+nm+" ☀️","Your declarations and verse for today are ready.");
+    add("19:30","evening","A gentle nudge"+nm,"Still time for one habit today. "+pick(PUSH));
+    if(S.showSteps!==false) add("18:00","steps","👟 Step check"+nm,"A short walk gets you closer to your step goal.");
+    activeHabits().forEach(function(h){ if(!h.time) return;
+      add(minusHour(h.time),"p:"+h.id,"⏰ Coming up in an hour",h.name);
+      add(h.time,"h:"+h.id,"⏰ Time for: "+h.name,"Your friendly nudge"+nm+". You've got this."); });
+  }
+  var mins=Object.keys(slots).map(Number).slice(0,80), slots2={};
+  mins.forEach(function(m){ slots2[String(m)]=slots[String(m)]; });
+  var daily={};
+  for(var i=0;i<7;i++){ var d=addDays(today(),i); var decl=(S.myDecl&&S.myDecl.length)? S.myDecl[0] : todaysAffirmations(d)[0];
+    var hr=+(S.reminderTime||"08:00").split(":")[0];
+    daily[d]={title:(hr<12?"Good morning":hr<17?"Good afternoon":"Good evening")+nm+" ☀️", body:"🗣️ Today's declaration: "+decl+" Open the app for your verse."}; }
+  return {mins:mins, slots:slots2, texts:texts, daily:daily};
+}
+function pushStatus(){
+  var p=dayProgress(today());
+  return idbSet("status",{date:today(),done:p.done,total:p.total,steps:stepsToday(),goal:S.stepGoal||8000,name:S.name||""});
+}
+function syncPush(force){
+  if(!pushConfigured() || !fbUser || !fbDb || Notification.permission!=="granted") return Promise.resolve(false);
+  var plan=buildPushPlan();
+  idbSet("texts",plan.texts); idbSet("daily",plan.daily); pushStatus();
+  return navigator.serviceWorker.ready.then(function(reg){
+    return firebase.messaging().getToken({vapidKey:FCM_VAPID_KEY, serviceWorkerRegistration:reg});
+  }).then(function(token){
+    if(!token) return false;
+    try{ localStorage.setItem("ese.pushToken",token); }catch(e){}
+    var sig=token+"|"+JSON.stringify(plan.slots);
+    if(!force && sig===lastPushPlan){ PUSH_ACTIVE=true; return true; }
+    var ref=fbDb.collection("push").doc(fbUser.uid);
+    return ref.get().then(function(doc){
+      var toks=((doc.exists && doc.data().tokens)||[]).filter(function(t){ return t!==token; });
+      toks.push(token); toks=toks.slice(-5);
+      /* Merge so the alarm sender can keep its own delivery markers in this document. */
+      return ref.set({tokens:toks, mins:plan.mins, slots:plan.slots, updatedAt:new Date().toISOString()},{merge:true});
+    }).then(function(){ lastPushPlan=sig; PUSH_ACTIVE=true; return true; });
+  }).catch(function(){ return false; });
+}
+/* Normal saves are debounced briefly, but alarm-time changes call syncAlarmPlanNow()
+   so a newly selected time cannot be missed just because the app was closed quickly. */
+function syncPushSoon(){ clearTimeout(pushTimer); pushTimer=setTimeout(function(){ syncPush(false); },400); }
+function syncAlarmPlanNow(){
+  clearTimeout(pushTimer);
+  if(!pushConfigured() || !fbUser) return Promise.resolve(false);
+  return syncPush(true);
+}
+function unregisterPush(){
+  var token=null; try{ token=localStorage.getItem("ese.pushToken"); localStorage.removeItem("ese.pushToken"); }catch(e){}
+  PUSH_ACTIVE=false; lastPushPlan="";
+  if(!pushConfigured() || !fbUser || !fbDb || !token) return Promise.resolve();
+  return fbDb.collection("push").doc(fbUser.uid).update({tokens:firebase.firestore.FieldValue.arrayRemove(token)})
+    .catch(function(){}).then(function(){ return firebase.messaging().deleteToken().catch(function(){}); });
+}
+
+/* ---------- privacy: end-to-end encryption ----------
+   Each person's habits, moods, declarations, steps, etc. are encrypted ON THEIR OWN DEVICE
+   with a key made from their password (PBKDF2 + AES-256-GCM, built into every modern
+   browser) before anything is sent to Firebase. Firebase, and the app admin, only ever
+   see scrambled text. The key never leaves the person's device. */
+var CRYPTO_KEY=null, CRYPTO_EMAIL="";
+function hasCrypto(){ try{ return !!(window.crypto && crypto.subtle && window.TextEncoder); }catch(e){ return false; } }
+function b64(buf){ var b=new Uint8Array(buf), s="", i; for(i=0;i<b.length;i+=8192){ s+=String.fromCharCode.apply(null,b.subarray(i,i+8192)); } return btoa(s); }
+function unb64(str){ var s=atob(str), b=new Uint8Array(s.length); for(var i=0;i<s.length;i++) b[i]=s.charCodeAt(i); return b; }
+function keySlot(email){ return "ese.k."+String(email||"").toLowerCase(); }
+function deriveKey(email,pw){
+  var enc=new TextEncoder(), em=String(email).toLowerCase();
+  return crypto.subtle.importKey("raw",enc.encode(pw),"PBKDF2",false,["deriveKey"]).then(function(base){
+    return crypto.subtle.deriveKey({name:"PBKDF2",salt:enc.encode("ese-habit-tracker:"+em),iterations:210000,hash:"SHA-256"},
+      base,{name:"AES-GCM",length:256},true,["encrypt","decrypt"]);
+  }).then(function(k){
+    return crypto.subtle.exportKey("raw",k).then(function(raw){
+      try{ localStorage.setItem(keySlot(em),b64(raw)); }catch(e){}
+      CRYPTO_KEY=k; CRYPTO_EMAIL=em; return k; });
+  });
+}
+function loadKey(email){
+  var em=String(email||"").toLowerCase();
+  if(CRYPTO_KEY && CRYPTO_EMAIL===em) return Promise.resolve(CRYPTO_KEY);
+  if(!hasCrypto()) return Promise.resolve(null);
+  var raw=null; try{ raw=localStorage.getItem(keySlot(em)); }catch(e){}
+  if(!raw) return Promise.resolve(null);
+  return crypto.subtle.importKey("raw",unb64(raw),{name:"AES-GCM"},false,["encrypt","decrypt"])
+    .then(function(k){ CRYPTO_KEY=k; CRYPTO_EMAIL=em; return k; }).catch(function(){ return null; });
+}
+function forgetKey(email){ try{ localStorage.removeItem(keySlot(email)); }catch(e){} CRYPTO_KEY=null; CRYPTO_EMAIL=""; }
+function encryptState(obj){
+  var iv=crypto.getRandomValues(new Uint8Array(12));
+  return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},CRYPTO_KEY,new TextEncoder().encode(JSON.stringify(obj)))
+    .then(function(ct){ return {iv:b64(iv),ct:b64(ct)}; });
+}
+function decryptState(enc){
+  return crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(enc.iv)},CRYPTO_KEY,unb64(enc.ct))
+    .then(function(pt){ return JSON.parse(new TextDecoder().decode(pt)); });
+}
+function cloudWrite(){
+  if(!fbReady() || !fbUser || !fbDb || !CRYPTO_KEY) return Promise.resolve();
+  var uid=fbUser.uid; S.ownerUid=uid;
+  return encryptState(S).then(function(enc){
+    return fbDb.collection("users").doc(uid).set({enc:enc,v:2,updatedAt:new Date().toISOString()});
+  }).catch(function(){});
+}
+var cloudTimer=null;
+function pushCloud(){
+  if(!fbReady() || !fbUser || !fbDb) return;
+  clearTimeout(cloudTimer);
+  cloudTimer=setTimeout(cloudWrite,900);
+}
+function save(){ saveLocal(); pushCloud(); if(pushConfigured()){ pushStatus(); if(fbUser) syncPushSoon(); } }
+
+/* ---------- dates ---------- */
+function iso(d){ d=d||new Date(); var m=d.getMonth()+1,day=d.getDate();
+  return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(day<10?"0":"")+day; }
+function addDays(s,n){ var d=new Date(s+"T12:00:00"); d.setDate(d.getDate()+n); return iso(d); }
+function today(){ return iso(); }
+function weekdayOf(s){ return new Date(s+"T12:00:00").getDay(); }
+var DAYN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function weekStart(date){ var wd=weekdayOf(date); var back=(wd===0)?6:(wd-1); return addDays(date,-back); }
+
+/* ---------- habit helpers ---------- */
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function activeHabits(){ return S.habits.filter(function(h){return !h.archived;})
+  .sort(function(a,b){return (a.order||0)-(b.order||0);}); }
+function dueOn(h,date){
+  if(h.archived) return false;
+  if(h.start && date < h.start) return false;
+  if(h.freq==="days") return (h.days||[]).indexOf(weekdayOf(date))>=0;
+  return true; // daily and times-per-week both show every day; times-per-week is scored per week (see weekMet)
+}
+function isDone(h,date){
+  var v=(S.done[h.id]||{})[date];
+  if(h.target>1){ return ((S.counts[h.id]||{})[date]||0) >= h.target; }
+  return !!v;
+}
+function isSkipped(h,date){ return !!(S.skips[h.id]||{})[date]; }
+
+function weekDoneCount(h,ws){ var n=0; for(var i=0;i<7;i++){ if(isDone(h,addDays(ws,i))) n++; } return n; }
+function weekMet(h,ws){ return weekDoneCount(h,ws) >= (h.perWeek||3); }
+function isSatisfied(h,date){ return h.freq==="week" ? (isDone(h,date) || weekMet(h,weekStart(date))) : isDone(h,date); }
+
+function setDone(h,date,val){
+  var was=isDone(h,date);
+  var prevLast=lastActiveDay();
+  S.done[h.id]=S.done[h.id]||{};
+  if(val) S.done[h.id][date]=true; else delete S.done[h.id][date];
+  if(h.target>1){ S.counts[h.id]=S.counts[h.id]||{}; S.counts[h.id][date]= val? h.target : 0; }
+  if(val && !was && date===today()) onFreshCompletion(prevLast);
+  save();
+}
+function bump(h,date,by){
+  var wasDone=isDone(h,date);
+  var prevLast=lastActiveDay();
+  S.counts[h.id]=S.counts[h.id]||{};
+  var v=Math.max(0,(S.counts[h.id][date]||0)+by);
+  S.counts[h.id][date]=v;
+  S.done[h.id]=S.done[h.id]||{};
+  if(v>=h.target) S.done[h.id][date]=true; else delete S.done[h.id][date];
+  if(!wasDone && isDone(h,date) && date===today()) onFreshCompletion(prevLast);
+  save();
+}
+function onFreshCompletion(prevLast){
+  awardPoints(10);
+  if(new Date().getHours()<7) S.hadEarlyBird=true;
+  if(prevLast && prevLast<addDays(today(),-2)) S.hadComeback=true;
+  var p=dayProgress(today());
+  if(p.total>0 && p.done>=p.total && S.lastSweepDate!==today()){
+    S.lastSweepDate=today(); S.cleanSweeps=(S.cleanSweeps||0)+1;
+    celebrate("🎉","All done today"+(S.name?", "+S.name:"")+"!",pick(ALLDONE));
+  }
+  try{ if(navigator.vibrate) navigator.vibrate(30); }catch(e){}
+}
+
+function streak(h){
+  if(h.freq==="week") return streakWeek(h);
+  var n=0, d=today();
+  if(!isDone(h,d) && !isSkipped(h,d)) d=addDays(d,-1);
+  for(var i=0;i<1000;i++){
+    if(!dueOn(h,d)){ d=addDays(d,-1); continue; }
+    if(isDone(h,d)||isSkipped(h,d)){ if(isDone(h,d)) n++; d=addDays(d,-1); }
+    else break;
+  }
+  return n;
+}
+function streakWeek(h){
+  var w=weekStart(today());
+  var n=weekMet(h,w)?1:0;
+  w=addDays(w,-7);
+  for(var i=0;i<520;i++){ if(weekMet(h,w)){ n++; w=addDays(w,-7); } else break; }
+  return n;
+}
+function bestStreak(h){
+  if(h.freq==="week") return bestStreakWeek(h);
+  var dates=Object.keys(S.done[h.id]||{}).sort();
+  if(!dates.length) return 0;
+  var best=0,run=0,prev=null;
+  for(var i=0;i<dates.length;i++){
+    if(prev && dates[i]===addDays(prev,1)) run++; else run=1;
+    if(run>best) best=run; prev=dates[i];
+  }
+  return best;
+}
+function bestStreakWeek(h){
+  var dates=Object.keys(S.done[h.id]||{}).sort();
+  if(!dates.length) return 0;
+  var w=weekStart(dates[0]), end=weekStart(today());
+  var best=0,run=0;
+  for(var i=0;i<600 && w<=end;i++){
+    if(weekMet(h,w)){ run++; if(run>best) best=run; } else run=0;
+    w=addDays(w,7);
+  }
+  return best;
+}
+function rate(h,days){
+  days=days||30;
+  if(h.freq==="week") return rateWeek(h,days);
+  var hit=0,tot=0,d=today();
+  for(var i=0;i<days;i++){
+    if(dueOn(h,d) && !isSkipped(h,d)){ tot++; if(isDone(h,d)) hit++; }
+    d=addDays(d,-1);
+  }
+  return tot? Math.round(hit*100/tot) : 0;
+}
+function rateWeek(h,days){
+  var weeks=Math.max(1,Math.round(days/7));
+  var w=weekStart(today()); var hit=0,tot=0;
+  for(var i=0;i<weeks;i++){ tot++; if(weekMet(h,w)) hit++; w=addDays(w,-7); }
+  return tot? Math.round(hit*100/tot):0;
+}
+function dayProgress(date){
+  var list=activeHabits().filter(function(h){return dueOn(h,date)&&!isSkipped(h,date);});
+  var done=list.filter(function(h){return isSatisfied(h,date);}).length;
+  return {done:done,total:list.length,pct: list.length? Math.round(done*100/list.length):0};
+}
+
+/* ---------- starter habits + library ---------- */
+var STARTERS=[
+  {name:"Drink water",icon:"💧",cat:"water",freq:"daily",target:8},
+  {name:"Move your body",icon:"🏃",cat:"exercise",freq:"daily",target:1},
+  {name:"Quiet time & prayer",icon:"🙏",cat:"mindfulness",freq:"daily",target:1},
+  {name:"Sleep by your bedtime",icon:"😴",cat:"sleep",freq:"daily",target:1},
+  {name:"Read or study 20 minutes",icon:"📚",cat:"study",freq:"daily",target:1}
+];
+var LIBRARY=[
+  {g:"Faith & quiet time",items:[["Morning prayer","🙏"],["Read a Bible chapter","📖"],["Gratitude list","✍️"],["Evening reflection","🌙"]]},
+  {g:"Health & body",items:[["Drink water","💧"],["Take vitamins","💊"],["Eat a fruit","🍎"],["Home-cooked meal","🍲"],["No late-night snacks","🚫"]]},
+  {g:"Exercise",items:[["Walk 30 minutes","🚶"],["Stretch","🤸"],["Workout","🏋️"],["Yoga","🧘"],["Take the stairs","🪜"]]},
+  {g:"Study & work",items:[["Start your biggest task first","🎯"],["Study 1 hour","📚"],["Review notes","🗒️"],["Inbox to zero","📧"],["Plan tomorrow","📅"]]},
+  {g:"Calm & mind",items:[["5 minutes of stillness","🌿"],["Breathing exercise","🌬️"],["Journal","📓"],["Phone-free hour","📵"]]},
+  {g:"Sleep & rest",items:[["In bed by 10:30","😴"],["No screens before bed","🌒"],["Wake at the same time","⏰"]]},
+  {g:"Home & money",items:[["Tidy for 10 minutes","🧹"],["Wash dishes","🍽️"],["Track spending","💰"],["Save something today","🏦"]]},
+  {g:"People",items:[["Call someone you love","📞"],["Encourage a friend","💬"],["Family time","👨‍👩‍👧"]]}
+];
+
+/* ---------- 64 health tips ---------- */
+var TIPS=[
+ ["water","Start your morning with a glass of water before anything else."],
+ ["water","Keep a bottle where you can see it — you drink what you see."],
+ ["water","Thirsty and tired mid-afternoon? Try water before coffee."],
+ ["water","Add a slice of lemon or cucumber if plain water feels boring."],
+ ["water","Drink a glass before each meal; it helps you eat more slowly."],
+ ["water","Dark yellow urine usually means you need more water today."],
+ ["water","Hot day or exercise? Add an extra two glasses."],
+ ["water","Pair water with a habit you already do, like brushing your teeth."],
+ ["movement","A 10-minute walk after a meal helps digestion and mood."],
+ ["movement","Stand up and stretch once every hour you sit."],
+ ["movement","Take the stairs when there are fewer than four floors."],
+ ["movement","Park a little farther away and walk the rest."],
+ ["movement","Two short walks count as much as one long one."],
+ ["movement","Strength work twice a week protects your bones."],
+ ["movement","Dance to three songs — that is real exercise."],
+ ["movement","Walk while you take phone calls."],
+ ["movement","Stiff neck? Roll your shoulders back ten times slowly."],
+ ["movement","Movement you enjoy is the movement you keep."],
+ ["sleep","Go to bed and wake up at the same time, even on weekends."],
+ ["sleep","Dim the lights an hour before bed to help your body wind down."],
+ ["sleep","Keep your bedroom cool, dark and quiet."],
+ ["sleep","Caffeine after 2pm can still be in your system at bedtime."],
+ ["sleep","If you cannot sleep after 20 minutes, get up and read somewhere dim."],
+ ["sleep","Write tomorrow's worries on paper so your mind can rest."],
+ ["sleep","Daytime sunlight helps you sleep better at night."],
+ ["sleep","Naps are fine — keep them under 30 minutes and before 3pm."],
+ ["food","Fill half your plate with vegetables."],
+ ["food","Eat slowly; fullness takes about 20 minutes to arrive."],
+ ["food","Cook a little extra so tomorrow's meal is already done."],
+ ["food","Whole grains keep you full longer than refined ones."],
+ ["food","Keep fruit visible and snacks out of sight."],
+ ["food","Protein at breakfast steadies your energy all morning."],
+ ["food","Read labels for added sugar — it hides in sauces and drinks."],
+ ["food","Do not shop for food while hungry."],
+ ["food","Beans and lentils are cheap, filling and good for your heart."],
+ ["food","One planned treat beats three unplanned ones."],
+ ["stress","Breathe in for four, hold for four, out for six. Repeat five times."],
+ ["stress","Name the feeling — naming it lowers its power."],
+ ["stress","Step outside for two minutes; daylight resets the mind."],
+ ["stress","Write down the one thing you can control today."],
+ ["stress","Say no to one thing this week to protect your peace."],
+ ["stress","Talk to someone. Carried alone, small things grow heavy."],
+ ["stress","Put your phone in another room for one hour."],
+ ["stress","Pray or sit in silence before you open messages in the morning."],
+ ["stress","Rest is not laziness; it is maintenance."],
+ ["stress","Progress, not perfection — one small step counts."],
+ ["hygiene","Wash your hands for 20 seconds, especially before eating."],
+ ["hygiene","Change your pillowcase weekly; your skin will thank you."],
+ ["hygiene","Brush twice a day and floss once."],
+ ["hygiene","Replace your toothbrush every three months."],
+ ["hygiene","Clean your phone screen — it touches your face all day."],
+ ["hygiene","Wash fruit and vegetables before eating."],
+ ["hygiene","Keep cuts clean and covered until they close."],
+ ["hygiene","Air out and sun your bedding when you can."],
+ ["movement","Set a timer to move for five minutes every hour of desk work."],
+ ["water","Finish your water goal before dinner so sleep is undisturbed."],
+ ["food","Drink your tea or coffee without sugar for one week and taste again."],
+ ["sleep","A warm shower before bed helps your body cool into sleep."],
+ ["stress","Gratitude for three specific things changes a heavy day."],
+ ["hygiene","Do not share towels, razors or nail clippers."],
+ ["movement","Stretch your hamstrings and hips if you sit most of the day."],
+ ["food","Eat at roughly the same times each day."],
+ ["sleep","Keep screens out of the bed; the bed is for rest."],
+ ["stress","When overwhelmed, do the smallest next thing. Just that one."]
+];
+function tipOfDay(){
+  var d=new Date(), n=Math.floor(d.getTime()/86400000);
+  return TIPS[n % TIPS.length];
+}
+
+/* ---------- companion (free, pre-written, no AI, no server, no cost) ---------- */
+var GREET=["Good to see you again","Welcome back","You showed up — that matters","Here we go again, gently",
+  "Hello again","Glad you're here","Look who's back","Another day, another chance"];
+var PUSH=["Small steps still move you forward.","You do not need a perfect day, just an honest one.",
+  "One habit done today is better than five planned tomorrow.","Start with the easiest one and let it pull you.",
+  "Consistency beats intensity every single time.","Pick the smallest habit and just begin.",
+  "You've done hard things before. This is smaller than those.","Future you is grateful for whatever you do right now."];
+var RESTART=["Missed a few days? Nothing is lost. Pick one habit and do it today.",
+  "A gap is not a failure — it is just a gap. Start again, softly.",
+  "You are not behind. You are simply beginning again, and that counts.",
+  "Yesterday is closed. Today is open. Choose one small win.",
+  "Welcome back. No guilt needed here, just the next step.",
+  "The comeback rarely feels dramatic. It just looks like showing up again."];
+var ALLDONE=["Everything done for today. Well done — rest without guilt.",
+  "That's a full day. Be proud of that.",
+  "Every habit, done. You showed up for yourself today.",
+  "Nothing left on the list. Go enjoy the rest of your day."];
+function pick(arr,seed){ return arr[(seed===undefined?Math.floor(Date.now()/86400000):seed) % arr.length]; }
+function lastActiveDay(){
+  var best=null;
+  S.habits.forEach(function(h){ Object.keys(S.done[h.id]||{}).forEach(function(d){ if(!best||d>best) best=d; }); });
+  return best;
+}
+var MOODS=[
+  {k:"great",e:"😄",l:"Great"},{k:"good",e:"🙂",l:"Good"},{k:"okay",e:"😐",l:"Okay"},
+  {k:"tired",e:"🥱",l:"Tired"},{k:"low",e:"😔",l:"Low"},{k:"stressed",e:"😣",l:"Stressed"}];
+var MOOD_REPLY={
+  great:["I love that energy{n}! Let's use it well today.","You're glowing{n}. Go make today count.","Great days are for building momentum. Let's go{n}!"],
+  good:["Good is a great place to start{n}.","Steady and good. That's how habits are built{n}.","Glad you're doing well{n}. One step at a time today."],
+  okay:["Okay is honest{n}. Let's find one small win.","Not every day sparkles, and that's fine{n}. Start with the easiest habit.","Okay days still count{n}. I'm right here with you."],
+  tired:["Rest is not failure{n}. Do the smallest version of your habits today.","Be gentle with yourself{n}. A glass of water and one habit is enough.","Tired days need kindness{n}. Pick one thing, then rest."],
+  low:["I'm sorry today feels heavy{n}. You don't have to do everything, just one small thing.","It's okay to feel low{n}. You are still worthy and loved.","Hold on{n}. Low days pass. Talk to someone you trust if it keeps weighing on you."],
+  stressed:["Breathe in slowly for 4, hold for 4, out for 4{n}. You've got this.","One thing at a time{n}. The list can wait while you breathe.","Stress is loud, but you are stronger{n}. Start with something small and calm."]};
+function moodReply(k){ var arr=MOOD_REPLY[k]||MOOD_REPLY.okay; var nm=S.name? ", "+S.name : "";
+  return arr[Math.abs(hashStr((S.deviceId||"x")+today()))%arr.length].replace("{n}",nm); }
+var AFFIRMATIONS=["I am bold and confident.","I am loved, and I am enough.","I am fearfully and wonderfully made.",
+  "I am strong, and I finish what I start.","I am calm, focused and in control.","I am growing better every single day.",
+  "I am worthy of good things.","I am disciplined, and my habits are building my future.","I am brave enough to begin again.",
+  "I am full of peace and joy today.","I am healthy, whole and grateful.","I am capable of hard things.",
+  "I am patient with myself as I grow.","I am a blessing to the people around me.","I am not afraid; I am stepping forward.",
+  "I am proud of how far I have come.","I am chosen, and I have a purpose.","I am kind to my body and my mind.",
+  "I am focused on progress, not perfection.","I am rested, refreshed and ready.","I am wise in my choices today.",
+  "I am confident in who I am becoming.","I am grateful for this new day.","I am a finisher, not a quitter.",
+  "I am filled with courage and strength.","I am in charge of my habits; they do not control me.","I am open to new opportunities.",
+  "I am radiant, and my light shines.","I am resilient; setbacks only make me stronger.","I am at peace with my past and excited for my future.",
+  "I am creative and full of good ideas.","I am surrounded by love and support.","I am doing my best, and my best is enough.",
+  "I am consistent, one small step at a time.","I am healthy in body, mind and spirit.","I am confident speaking up for myself.",
+  "I am worthy of rest and of success.","I am becoming the person I prayed to be.","I am strong in faith and steady in spirit.",
+  "I am unstoppable when I keep showing up.","I am thankful, and my heart is full.","I am a light in every room I enter.",
+  "I am learning, growing and glowing.","I am free from fear and full of hope.","I am making today a good day.",
+  "I am the head and not the tail.","I am blessed in my going out and my coming in.","I am more than a conqueror.",
+  "I am walking in favour today.","I am led by peace, not by fear.","I am a lender and not a borrower.",
+  "I am clothed in strength and dignity.","I am growing in wisdom and understanding.","I am anointed for this season.",
+  "I am full of energy and good health.","I am attracting good opportunities.","I am worthy of love and respect.",
+  "I am a problem solver.","I am brilliant, and I learn quickly.","I am successful in everything I set my hands to.",
+  "I am surrounded by the right people.","I am letting go of what I cannot control.","I am choosing joy on purpose today.",
+  "I am enough, even on my hard days.","I am turning my goals into habits.","I am speaking kindly to myself.",
+  "I am calm under pressure.","I am protected and guided.","I am excellent at what I do.",
+  "I am creating a life I love.","I am grateful for my body and all it does for me.","I am building a legacy one day at a time.",
+  "I am determined, and I will not give up.","I am confident in my gifts and talents.","I am shining without apology.",
+  "I am renewed, restored and refreshed.","I am free to begin again at any moment.","I am in the right place at the right time.",
+  "I am generous, and good comes back to me.","I am strong enough to ask for help.","I am valuable, and my voice matters.",
+  "I am a person of my word.","I am diligent, and diligence brings reward.","I am secure in who I am.",
+  "I am overflowing with gratitude.","I am taking care of my mind, body and spirit.","I am brave in new situations.",
+  "I am one decision away from a better day.","I am stronger than any excuse.","I am proud to be me.",
+  "I am rising higher every day.","I am unshaken by yesterday.","I am expecting good things today."];
+function seededRand(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; var t=Math.imul(seed^seed>>>15,1|seed);
+  t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function todaysAffirmations(date){
+  date=date||today();
+  var shift=(S.affShift||{})[date]||0, rnd=seededRand(hashStr((S.deviceId||"x")+date+":"+shift));
+  var pool=AFFIRMATIONS.slice(), out=[];
+  while(out.length<5 && pool.length){ out.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]); }
+  return out;
+}
+function todaysAffirmation(){ return (S.myDecl&&S.myDecl.length)? S.myDecl[0] : todaysAffirmations()[0]; }
+function showedUp(d){
+  if((S.affirmed||{})[d]) return true;
+  return S.habits.some(function(h){ return !!(S.done[h.id]||{})[d]; });
+}
+function showUpStreak(){
+  var d=today(); if(!showedUp(d)) d=addDays(d,-1);
+  var n=0; while(showedUp(d) && n<3650){ n++; d=addDays(d,-1); } return n;
+}
+function celebrate(emoji,title,msg){
+  confettiBurst(); try{ if(navigator.vibrate) navigator.vibrate([40,60,40]); }catch(e){}
+  openDialog('<div class="celebrate"><div class="cele-emoji">'+emoji+'</div><h2>'+esc(title)+'</h2>'+
+    '<p>'+esc(msg)+'</p><button class="btn primary" onclick="closeDialog()">Keep going 🚀</button></div>');
+}
+function celebrateOnce(key,emoji,title,msg){
+  S.celebrated=S.celebrated||[]; if(S.celebrated.indexOf(key)>=0) return false;
+  S.celebrated.push(key); save(); celebrate(emoji,title,msg); return true;
+}
+function checkShowUpStreak(){
+  var n=showUpStreak(), nm=S.name? ", "+S.name : "";
+  S.celebrated=S.celebrated||[]; var top=0;
+  [3,7,14,21,30,50,100,200,365].forEach(function(m){
+    if(n>=m && S.celebrated.indexOf("show:"+m)<0){ S.celebrated.push("show:"+m); top=m; }
+  });
+  if(top){ save(); celebrate("🔥",top+"-day streak"+nm+"!","You've shown up for yourself "+top+" days in a row. That is who you are now."); }
+}
+function companionMessage(){
+  var nm=S.name? (", "+S.name) : "";
+  var p=dayProgress(today());
+  var last=lastActiveDay();
+  var seed=Math.floor(Date.now()/86400000);
+  if(last && last<addDays(today(),-2)) return pick(RESTART,seed)+ " " + (S.name? S.name+", I am glad you are back.":"");
+  if(p.total===0) return "Add a habit or two and we will start together"+nm+".";
+  if(p.done===0) return pick(GREET,seed)+nm+". "+pick(PUSH,seed+1);
+  if(p.done<p.total) return "You have done "+p.done+" of "+p.total+nm+". Keep going gently.";
+  return pick(ALLDONE,seed)+ (nm? " ("+S.name+")":"");
+}
+function moodEmoji(){
+  var p=dayProgress(today());
+  if(p.total===0) return "🙂";
+  if(p.done===0) return "😴";
+  if(p.done<p.total) return "💪";
+  return "🤩";
+}
+function checkMilestones(){
+  activeHabits().forEach(function(h){
+    var s=streak(h);
+    var top=0;
+    [3,7,14,21,30,50,100,365].forEach(function(m){
+      var key=h.id+":"+m;
+      if(s>=m && S.seenMilestones.indexOf(key)<0){ S.seenMilestones.push(key); top=m; }
+    });
+    [top].forEach(function(m){
+      if(m){ save();
+        celebrate(h.icon||"🔥", m+(h.freq==="week"?"-week":"-day")+" streak!", "\""+h.name+"\" "+m+(h.freq==="week"?" weeks":" days")+" in a row"+(S.name?", "+S.name:"")+". Keep it burning.");
+      }
+    });
+  });
+  checkShowUpStreak();
+  checkBadges();
+}
+
+/* ---------- points, levels & badges (all local, no cost) ---------- */
+var LEVELS=[
+  {min:0,name:"Starter"},{min:100,name:"Steady"},{min:400,name:"Consistent"},
+  {min:1000,name:"Unstoppable"},{min:3000,name:"Legend"}
+];
+function levelOf(pts){ var cur=LEVELS[0]; LEVELS.forEach(function(l){ if(pts>=l.min) cur=l; }); return cur; }
+function nextLevel(pts){ for(var i=0;i<LEVELS.length;i++){ if(LEVELS[i].min>pts) return LEVELS[i]; } return null; }
+function awardPoints(n){
+  var before=levelOf(S.points||0).name;
+  S.points=(S.points||0)+n; save();
+  var after=levelOf(S.points).name;
+  if(after!==before){ toast("⭐ Level up: "+after+"!"); confettiBurst(); }
+}
+var BADGES=[
+ {id:"first_step",name:"First Step",icon:"🌱",desc:"Complete your very first habit"},
+ {id:"streak7",name:"7-Day Streak",icon:"🔥",desc:"Reach a 7-day streak on any habit"},
+ {id:"streak30",name:"30-Day Hero",icon:"🏆",desc:"Reach a 30-day streak on any habit"},
+ {id:"streak100",name:"Centurion",icon:"💯",desc:"Reach a 100-day streak on any habit"},
+ {id:"water_champ",name:"Water Champion",icon:"💧",desc:"Hit your water goal 7 times"},
+ {id:"mover",name:"Mover",icon:"🏃",desc:"Log 10 exercise sessions"},
+ {id:"comeback",name:"Comeback Kid",icon:"💪",desc:"Come back after missing 3+ days"},
+ {id:"tip_collector",name:"Tip Collector",icon:"💡",desc:"Save 10 favorite health tips"},
+ {id:"verse_keeper",name:"Verse Keeper",icon:"📖",desc:"Save 5 favorite Bible verses"},
+ {id:"clean_sweep",name:"Clean Sweep",icon:"✨",desc:"Complete every habit in a day, 5 times"},
+ {id:"early_bird",name:"Early Bird",icon:"🌅",desc:"Complete a habit before 7am"},
+ {id:"legend",name:"Legend",icon:"👑",desc:"Reach the Legend level"},
+ {id:"steps10k",name:"Ten Thousand",icon:"👟",desc:"Walk 10,000 steps in one day"},
+ {id:"affirm7",name:"Speaking Life",icon:"🗣️",desc:"Say your daily declaration on 7 days"},
+ {id:"mood7",name:"Self-Aware",icon:"🌈",desc:"Check in your mood on 7 days"}
+];
+function waterGoalHits(){ var n=0; Object.keys(S.water).forEach(function(d){ if(S.water[d]>=S.waterGoal) n++; }); return n; }
+function badgeEarned(id){
+  switch(id){
+    case "first_step": return Object.keys(S.done).some(function(hid){ return Object.keys(S.done[hid]||{}).length>0; });
+    case "streak7": return S.habits.some(function(h){ return bestStreak(h)>=7; });
+    case "streak30": return S.habits.some(function(h){ return bestStreak(h)>=30; });
+    case "streak100": return S.habits.some(function(h){ return bestStreak(h)>=100; });
+    case "water_champ": return waterGoalHits()>=7;
+    case "mover": return S.exercise.length>=10;
+    case "comeback": return !!S.hadComeback;
+    case "tip_collector": return S.favTips.length>=10;
+    case "verse_keeper": return (S.favVerses||[]).length>=5;
+    case "clean_sweep": return (S.cleanSweeps||0)>=5;
+    case "early_bird": return !!S.hadEarlyBird;
+    case "legend": return levelOf(S.points||0).name==="Legend";
+    case "steps10k": return Object.keys(S.steps||{}).some(function(d){ return S.steps[d]>=10000; });
+    case "affirm7": return Object.keys(S.affirmed||{}).length>=7;
+    case "mood7": return Object.keys(S.moods||{}).length>=7;
+  }
+  return false;
+}
+function checkBadges(){
+  BADGES.forEach(function(b){
+    if(S.badges.indexOf(b.id)<0 && badgeEarned(b.id)){
+      S.badges.push(b.id); save();
+      toast(b.icon+" Badge unlocked: "+b.name); confettiBurst();
+    }
+  });
+}
+function confettiBurst(){
+  try{ if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; }catch(e){}
+  var colors=["#4361ee","#8093ff","#ec4899","#f472b6","#60a5fa"];
+  for(var i=0;i<24;i++){
+    (function(){
+      var el=document.createElement("div");
+      el.className="confetti-piece";
+      el.style.left=(Math.random()*100)+"vw";
+      el.style.background=colors[Math.floor(Math.random()*colors.length)];
+      el.style.animationDuration=(1.6+Math.random()*1.2)+"s";
+      document.body.appendChild(el);
+      setTimeout(function(){ el.remove(); },3000);
+    })();
+  }
+}
+
+/* ---------- Suggestions & Admin (optional, free) ----------
+   Paste your own free Firebase project's config below to switch this on.
+   Until you do, the Suggestion box quietly tells the user it isn't set up yet,
+   and everything else in the app works exactly the same either way.
+   Full setup steps are in FIREBASE_SETUP.md. */
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC_Np6rMDtSRaTcJk8nJrd0gwDBmuhI-RY",
+  authDomain: "ese-habit-tracker.firebaseapp.com",
+  projectId: "ese-habit-tracker",
+  storageBucket: "ese-habit-tracker.firebasestorage.app",
+  messagingSenderId: "638819728713",
+  appId: "1:638819728713:web:68a232da999055a0ec2e98"
+};
+var fbApp=null, fbAuth=null, fbDb=null, fbUser=null, fbIsAdmin=false;
+var appPhase = "app"; /* "loading" | "auth" | "app" — see boot() */
+function fbReady(){ return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey.indexOf("PASTE")<0 && window.firebase); }
+function fbInit(){
+  if(!fbReady() || fbApp) return;
+  fbApp=firebase.initializeApp(FIREBASE_CONFIG);
+  fbAuth=firebase.auth();
+  fbDb=firebase.firestore();
+  try{ fbDb.enablePersistence({synchronizeTabs:true}).catch(function(){}); }catch(e){}
+  var _cloudLoadedFor=null;
+  fbAuth.onAuthStateChanged(function(u){
+    fbUser=u; fbIsAdmin=false;
+    if(u){
+      fbDb.collection("admins").doc(String(u.email||"").toLowerCase()).get().then(function(doc){
+        fbIsAdmin=doc.exists; if(tab==="admin"||tab==="settings") render();
+      }).catch(function(){});
+      /* Firebase can fire this callback more than once for the same signed-in user
+         (e.g. once from a locally cached session, again after server validation, or
+         on a silent token refresh). Only run the full data-load-and-redraw sequence
+         once per user per page load — otherwise a second firing while someone is
+         mid-typing would rebuild the whole screen out from under them. */
+      if(_cloudLoadedFor!==u.uid){
+        _cloudLoadedFor=u.uid;
+        loadKey(u.email).then(function(k){
+          if(k || !hasCrypto()){ loadCloudData(u.uid); }
+          else { _cloudLoadedFor=null; window._needUnlock=true; fbAuth.signOut(); }
+        });
+      }
+    } else {
+      _cloudLoadedFor=null;
+      appPhase="auth"; render();
+    }
+  });
+}
+function loadCloudData(uid){
+  var last=S.lastOpen;
+  fbDb.collection("users").doc(uid).get().then(function(doc){
+    var d=doc.exists? doc.data() : null;
+    if(d && d.enc && CRYPTO_KEY) return decryptState(d.enc).then(function(st){ return {state:st}; }, function(){ return {failed:true}; });
+    if(d && d.state) return {state:d.state, legacy:true};   /* older, unencrypted save: read once, then re-save encrypted */
+    return {};
+  }).then(function(r){
+    if(r.state){
+      var incoming=r.state, dev=S.deviceId;
+      for(var k in DEFAULTS){ if(!(k in incoming)) incoming[k]=DEFAULTS[k]; }
+      S=incoming; if(!S.deviceId) S.deviceId=dev; S.ownerUid=uid; saveLocal();
+      if(r.legacy) pushCloudNow();
+    } else {
+      if(r.failed) toast("Your password was changed, so older cloud data couldn't be unlocked. Using what's on this phone.");
+      if(S.ownerUid && S.ownerUid!==uid){ var dv=S.deviceId, th=S.theme; S=JSON.parse(JSON.stringify(DEFAULTS)); S.deviceId=dv; S.theme=th; }
+      S.ownerUid=uid; saveLocal();
+      pushCloudNow();
+    }
+    appPhase="app";
+    /* Don't yank someone out of the onboarding wizard if they've already started
+       answering questions (obStep>0) — only redirect on a genuinely fresh load. */
+    var midOnboarding=(tab==="onboard" && typeof obStep!=="undefined" && obStep>0);
+    if(!midOnboarding){
+      if(!S.started){ tab="onboard"; } else if(tab==="onboard"||tab==="auth"||tab==="today"){ tab="today"; }
+    }
+    S.lastOpen=today(); saveLocal();
+    trackVisit(); loadAnnouncement(); syncPush(true);
+    if(!midOnboarding) render();
+    startAutoSteps();
+    if(S.started && last && last!==today()) setTimeout(function(){ toast(companionMessage()); },700);
+  }).catch(function(){ appPhase="app"; if(!S.started) tab="onboard"; render(); });
+}
+function pushCloudNow(){ return cloudWrite(); }
+function pageLoading(){
+  return '<div class="card" style="text-align:center"><h2>Ese Daily Habit Tracker</h2>'+
+    '<p class="small">Loading your account…</p><div class="loadbar"><i></i></div></div>';
+}
+function pageAuthGate(){
+  return '<div class="welcome-hero"><div class="welcome-logo">E</div>'+
+    '<h1>Your daily best friend for better habits</h1>'+
+    '<p>Build habits that stick, start each day with a verse and a declaration, and get cheered on every step of the way.</p>'+
+    '<div class="feature-grid">'+
+      [["✅","Habits that fit your life"],["📖","A verse for every day"],["🗣️","Daily declarations"],["😊","Mood check-ins"],["👟","Step tracker"],["🏆","Streaks, badges & rewards"]]
+      .map(function(f,i){ return '<div class="feature" style="animation-delay:'+(0.08*i)+'s"><span>'+f[0]+'</span>'+f[1]+'</div>'; }).join("")+
+    '</div></div>'+
+    (window._needUnlock? '<div class="card" style="border-color:var(--pink)"><h3>🔒 Your habits are now private</h3><p class="small" style="margin:0">We added encryption so nobody, not even the app admin, can read your habits. Please sign in once more to unlock them.</p></div>':'')+
+    '<div class="card"><h2>Get started</h2>'+
+    '<p class="small">Create a free account, or sign in, so your habits follow you to any phone or laptop.</p>'+
+    '<label class="f">Email</label><input id="gEmail" type="email" autocomplete="username" />'+
+    '<label class="f">Password</label><input id="gPass" type="password" autocomplete="current-password" />'+
+    '<div class="row" style="margin-top:12px"><button class="btn primary" id="gSignIn">Sign in</button>'+
+    '<button class="btn" id="gSignUp">Create account</button></div>'+
+    '<div class="row" style="margin-top:8px"><button class="btn sm ghost" id="gForgot">Forgot password?</button></div>'+
+    '<p class="small" style="margin-top:10px">Free forever. No subscription, no ads, no hidden charges.</p></div>';
+}
+function authMsg(err,fallback){
+  var c=(err&&err.code)||"";
+  var map={"auth/invalid-email":"That email doesn't look right.","auth/user-not-found":"No account with that email yet — tap Create account.",
+    "auth/wrong-password":"That password isn't right.","auth/invalid-credential":"Email or password isn't right.","auth/invalid-login-credentials":"Email or password isn't right.",
+    "auth/email-already-in-use":"That email already has an account — tap Sign in.","auth/weak-password":"Use a stronger password (6+ characters).",
+    "auth/network-request-failed":"No internet connection. Try again.","auth/too-many-requests":"Too many tries. Wait a moment and try again."};
+  return map[c]||fallback;
+}
+function busy(id,on){ var b=document.getElementById(id); if(b){ b.disabled=on; if(on){b.dataset.t=b.textContent;b.textContent="Please wait…";} else if(b.dataset.t){b.textContent=b.dataset.t;} } }
+function wireAuthGate(){
+  var q=function(s){return document.getElementById(s);};
+  if(q("gPass")) q("gPass").onkeydown=function(e){ if(e.key==="Enter" && q("gSignIn")) q("gSignIn").click(); };
+  if(q("gSignIn")) q("gSignIn").onclick=function(){
+    var em=q("gEmail").value.trim(), pw=q("gPass").value;
+    if(!em||!pw){ toast("Enter your email and password"); return; }
+    busy("gSignIn",true);
+    (hasCrypto()? deriveKey(em,pw).catch(function(){}) : Promise.resolve())
+      .then(function(){ return fbAuth.signInWithEmailAndPassword(em,pw); })
+      .catch(function(err){ forgetKey(em); busy("gSignIn",false); toast(authMsg(err,"Sign in failed")); }); };
+  if(q("gSignUp")) q("gSignUp").onclick=function(){
+    var em=q("gEmail").value.trim(), pw=q("gPass").value;
+    if(!em||!pw){ toast("Enter your email and password"); return; }
+    if(pw.length<8 || !/[0-9]/.test(pw) || !/[A-Za-z]/.test(pw)){ toast("Use at least 8 characters, with letters and at least one number"); return; }
+    busy("gSignUp",true);
+    (hasCrypto()? deriveKey(em,pw).catch(function(){}) : Promise.resolve())
+      .then(function(){ return fbAuth.createUserWithEmailAndPassword(em,pw); })
+      .catch(function(err){ forgetKey(em); busy("gSignUp",false); toast(authMsg(err,"Could not create account")); }); };
+  if(q("gForgot")) q("gForgot").onclick=function(){
+    var em=(q("gEmail").value||"").trim(); if(!em){ toast("Enter your email first"); return; }
+    if(!confirm("Your habits are encrypted with your password. After a reset, habits saved in the cloud can't be unlocked on a NEW device (they stay on phones you're already signed in on). Send the reset email?")) return;
+    fbAuth.sendPasswordResetEmail(em).then(function(){ toast("Password reset email sent"); })
+      .catch(function(){ toast("Could not send reset email"); }); };
+}
+
+function sendSuggestion(text,name){
+  if(!fbReady()){ toast("Suggestions aren't switched on yet."); return; }
+  fbInit();
+  fbDb.collection("suggestions").add({text:text,name:name||"",date:new Date().toISOString()})
+    .then(function(){ toast("Thank you — your message was sent."); })
+    .catch(function(){ toast("Could not send. Check your connection and try again."); });
+}
+function trackVisit(){
+  if(!fbReady()) return;
+  var devDoc=fbDb.collection("devices").doc(S.deviceId);
+  devDoc.get().then(function(doc){
+    if(!doc.exists){
+      devDoc.set({firstSeen:new Date().toISOString()});
+      fbDb.collection("stats").doc("summary").set({uniqueDevices:firebase.firestore.FieldValue.increment(1)},{merge:true});
+    }
+    fbDb.collection("stats").doc("summary").set({totalOpens:firebase.firestore.FieldValue.increment(1)},{merge:true});
+  }).catch(function(){});
+}
+var ANNOUNCEMENT=null;
+function loadAnnouncement(){
+  fbDb.collection("announcements").doc("current").get().then(function(doc){
+    ANNOUNCEMENT = doc.exists ? doc.data().text : null;
+    if(tab==="today") render();
+  }).catch(function(){});
+}
+function loadAdminStats(){
+  if(!fbDb) return;
+  fbDb.collection("stats").doc("summary").get().then(function(doc){
+    var d=doc.exists?doc.data():{totalOpens:0,uniqueDevices:0};
+    var el=document.getElementById("statsBox");
+    if(el) el.innerHTML='<p style="margin:0"><b>'+(d.uniqueDevices||0)+'</b> people have used this app · <b>'+(d.totalOpens||0)+'</b> total opens</p>';
+  }).catch(function(){ var el=document.getElementById("statsBox"); if(el) el.textContent="Could not load."; });
+}
+function loadAdminData(){
+  if(!fbDb) return;
+  var el=document.getElementById("sugList"); if(el) el.innerHTML='<p class="small">Loading…</p>';
+  fbDb.collection("suggestions").orderBy("date","desc").limit(300).get().then(function(qs){
+    var rows="";
+    if(qs.empty) rows='<p class="small">No suggestions yet.</p>';
+    qs.forEach(function(doc){
+      var d=doc.data();
+      rows+='<div class="item row"><span style="flex:1"><b>'+esc(d.name||"Anonymous")+'</b> · '+esc((d.date||"").slice(0,10))+
+        '<br>'+esc(d.text||"")+'</span><button class="btn sm" data-delsug="'+doc.id+'">Delete</button></div>';
+    });
+    var el2=document.getElementById("sugList"); if(el2){ el2.innerHTML=rows;
+      el2.querySelectorAll("[data-delsug]").forEach(function(b){ b.onclick=function(){
+        fbDb.collection("suggestions").doc(b.dataset.delsug).delete().then(loadAdminData); }; }); }
+  }).catch(function(){ var el3=document.getElementById("sugList"); if(el3) el3.innerHTML='<p class="small">Could not load suggestions.</p>'; });
+}
+function pageAdmin(){
+  if(!fbReady()){
+    return '<div class="card"><h2>Admin</h2><p class="small">This is not switched on yet. Add your free Firebase project\'s details near the top of the script (see FIREBASE_SETUP.md), then this page works.</p>'+
+      '<div class="row" style="margin-top:10px"><button class="btn" id="adminBack">Back to Settings</button></div></div>';
+  }
+  if(!fbUser){
+    return '<div class="card"><h2>Admin</h2><p class="small">Sign in first from the welcome screen, then come back here.</p>'+
+      '<div class="row" style="margin-top:10px"><button class="btn" id="adminBack">Back</button></div></div>';
+  }
+  if(!fbIsAdmin){
+    return '<div class="card"><h2>Not an admin</h2><p class="small">Signed in as '+esc(fbUser.email)+', but this email is not on the admin list. Ask an existing admin to add it.</p>'+
+      '<div class="row" style="margin-top:10px"><button class="btn" id="adminBack">Back</button></div></div>';
+  }
+  var h='<div class="card"><h2>Admin</h2><p class="small">Signed in as '+esc(fbUser.email)+'</p>'+
+    '<div class="row"><button class="btn" id="adminBack">Back</button></div></div>';
+  h+='<div class="card"><h3>Visitors</h3><div id="statsBox" class="small">Loading…</div></div>';
+  h+='<div class="card"><h3>Post an update</h3><p class="small">Shown as a banner to everyone on the Today page.</p>'+
+     '<textarea id="annText" placeholder="e.g. New: exercise tracking is here!"></textarea>'+
+     '<div class="row" style="margin-top:10px"><button class="btn primary" id="annSend">Post</button>'+
+     '<button class="btn" id="annClear">Clear current update</button></div></div>';
+  h+='<div class="card"><h3>Add an admin</h3><label class="f">Their email</label><input id="newAdminEmail" type="email" />'+
+     '<div class="row" style="margin-top:10px"><button class="btn primary" id="addAdminBtn">Add</button></div>'+
+     '<p class="small">They then sign up on the welcome screen with that same email.</p></div>';
+  h+='<div class="card"><h3>Suggestions</h3><div id="sugList" class="list"><p class="small">Loading…</p></div></div>';
+  return h;
+}
+
+/* ---------- onboarding (first run): build a plan from the person's own goals, any area of life ---------- */
+var OB_STEPS=5; /* 0:name 1:categories 2:custom 3:count 4:time -> 5:"building" screen */
+if(typeof obStep==="undefined") var obStep=0;
+if(typeof obData==="undefined") var obData={name:"",cats:[],custom:"",count:5,time:S&&S.reminderTime||"08:00"};
+function obProgressDots(){
+  var d=''; for(var i=0;i<OB_STEPS;i++){ d+='<span class="obdot'+(i<=obStep?' on':'')+'"></span>'; }
+  return '<div class="obdots">'+d+'</div>';
+}
+function obNav(backOn,nextLabel,act){
+  return '<div class="card"><div class="row">'+(backOn?'<button type="button" class="btn" data-obact="back">Back</button>':'')+
+    '<button type="button" class="btn primary" data-obact="'+(act||"next")+'">'+nextLabel+'</button></div></div>';
+}
+function pageOnboard(){
+  if(obStep>=5) return pageOnboardBuilding();
+  var nm=obData.name? esc(obData.name) : "";
+  var titles=["Hi, I'm Ese 👋","Nice to meet you"+(nm?", "+nm:"")+"!","Anything else"+(nm?", "+nm:"")+"?","How many to start with?","When should I check on you?"];
+  var subs=["I'll be your daily companion for habits, faith, health and encouragement. A few quick questions first.",
+    "What do you want to build habits around? Tap as many as fit.","Add your own habits, separated by commas. Optional, you can leave it blank.",
+    "Starting small makes it easier to keep going.","I'll send you a friendly nudge at this time each day."];
+  var h='<div class="card ob-head"><div class="mascot">'+["👋","🎯","✍️","🔢","⏰"][obStep]+'</div><h2>'+titles[obStep]+'</h2>'+
+    '<p class="small">'+subs[obStep]+'</p>'+obProgressDots()+'</div>';
+  if(obStep===0){
+    h+='<div class="card"><h3>What should I call you?</h3>'+
+      '<input id="obName" type="text" autocomplete="given-name" placeholder="Your first name or nickname" value="'+esc(obData.name)+'" /></div>';
+    h+=obNav(false,"Next");
+  } else if(obStep===1){
+    h+='<div class="card"><div class="row">'+
+      LIBRARY.map(function(g,i){ return '<button type="button" class="btn sm'+(obData.cats.indexOf(i)>=0?" on":"")+'" data-obcat="'+i+'">'+esc(g.g)+'</button>'; }).join("")+
+      '</div></div>';
+    h+='<div class="card"><div class="row"><button type="button" class="btn" data-obact="back">Back</button>'+
+      '<button type="button" class="btn primary" data-obact="next">Next</button>'+
+      '<button type="button" class="btn ghost" data-obact="skip">Skip, use 5 general habits</button></div></div>';
+  } else if(obStep===2){
+    h+='<div class="card"><input id="obCustom" type="text" autocomplete="off" placeholder="e.g. Practice guitar, Learn Yoruba, Job applications" value="'+esc(obData.custom)+'" /></div>';
+    h+=obNav(true,"Next");
+  } else if(obStep===3){
+    h+='<div class="card"><div class="switch">'+
+      [3,5,7].map(function(n){return '<button type="button" data-obcount="'+n+'" class="'+(n===obData.count?"on":"")+'">'+n+' habits</button>';}).join("")+
+      '</div></div>';
+    h+=obNav(true,"Next");
+  } else if(obStep===4){
+    h+='<div class="card"><input id="obTime" type="time" value="'+esc(obData.time)+'" /></div>';
+    h+=obNav(true,"Build my plan ✨","go");
+  }
+  return h;
+}
+function pageOnboardBuilding(){
+  return '<div class="card" style="text-align:center"><div class="mascot" style="font-size:48px">✨</div>'+
+    '<h2>Building your plan'+(obData.name?', '+esc(obData.name):'')+'…</h2><p class="small">Putting together habits based on what you picked.</p></div>';
+}
+
+/* ---------- water ---------- */
+function waterToday(){ return S.water[today()]||0; }
+function addWater(n){ S.water[today()]=Math.max(0,waterToday()+n); save(); render();
+  if(n>0 && waterToday()>=S.waterGoal && (S.water[addDays(today(),-0)]-n)<S.waterGoal){ checkBadges(); } }
+
+/* ---------- ui helpers ---------- */
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function toast(msg){
+  document.querySelectorAll(".toast").forEach(function(o){o.remove();});
+  var t=document.createElement("div"); t.className="toast"; t.setAttribute("role","status"); t.textContent=msg;
+  document.body.appendChild(t); setTimeout(function(){ t.remove(); },3200);
+}
+function openDialog(html){ var d=document.getElementById("dlg"); document.getElementById("dlgBody").innerHTML=html; if(d.open) return; if(d.showModal) d.showModal(); else d.setAttribute("open",""); }
+document.getElementById("dlg").addEventListener("click",function(e){ if(e.target===this) this.close(); });
+function closeDialog(){ document.getElementById("dlg").close(); }
+
+/* ---------- theme ---------- */
+function applyTheme(){
+  var t=S.theme;
+  if(t==="system") t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark":"light";
+  document.documentElement.setAttribute("data-theme",t);
+}
+document.getElementById("themeBtn").onclick=function(){
+  S.theme = S.theme==="light" ? "dark" : S.theme==="dark" ? "system":"light";
+  save(); applyTheme(); toast("Theme: "+S.theme); render();
+};
+try{ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",applyTheme); }catch(e){}
+
+/* ---------- install (PWA) ---------- */
+var deferredPrompt=null;
+window.addEventListener("beforeinstallprompt", function(e){
+  e.preventDefault(); deferredPrompt=e;
+  var b=document.getElementById("installBtn"); if(b) b.classList.remove("hide");
+});
+document.getElementById("installBtn").onclick=function(){
+  if(!deferredPrompt){ toast("On iPhone: tap Share, then 'Add to Home Screen'."); return; }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(){ deferredPrompt=null; document.getElementById("installBtn").classList.add("hide"); });
+};
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("./sw.js").then(function(reg){
+      reg.addEventListener("updatefound", function(){
+        var nw=reg.installing;
+        if(nw) nw.addEventListener("statechange", function(){
+          if(nw.state==="activated") { /* new version now controlling; will apply on next reload trigger below */ }
+        });
+      });
+    }).catch(function(){});
+    var refreshed=false;
+    navigator.serviceWorker.addEventListener("controllerchange", function(){
+      if(refreshed) return; refreshed=true; window.location.reload();
+    });
+  });
+}
+
+/* ---------- navigation ---------- */
+var TABS=[
+  ["today","Today","🏠"],["add","Add","➕"],["progress","Progress","📈"],
+  ["water","Water","💧"],["steps","Steps","👟"],["move","Exercise","🏃"],["verse","Verse","📖"],
+  ["tips","Tips","💡"],["settings","Settings","⚙️"]
+];
+var tab="today";
+function drawNav(){
+  var b="",s="";
+  if(S.showSteps===false && tab==="steps") tab="today";
+  TABS.forEach(function(t){
+    if(t[0]==="steps" && S.showSteps===false) return;
+    var on = t[0]===tab ? " on":"";
+    b+='<button class="'+on.trim()+'" data-t="'+t[0]+'"><span style="font-size:18px">'+t[2]+'</span>'+t[1]+'</button>';
+    s+='<button class="'+on.trim()+'" data-t="'+t[0]+'"><span>'+t[2]+'</span>'+t[1]+'</button>';
+  });
+  document.getElementById("bottomNav").innerHTML=b;
+  document.getElementById("sideNav").innerHTML=s;
+  document.querySelectorAll("[data-t]").forEach(function(el){
+    el.onclick=function(){ tab=el.getAttribute("data-t"); window.scrollTo({top:0,behavior:"instant"}); render(); };
+  });
+  var act=document.querySelector("#bottomNav button.on"); if(act&&act.scrollIntoView) act.scrollIntoView({block:"nearest",inline:"center"});
+}
+
+/* ---------- pages ---------- */
+function pageToday(){
+  var t=today(), p=dayProgress(t), list=activeHabits();
+  var tip=tipOfDay();
+  var lvl=levelOf(S.points||0), nlv=nextLevel(S.points||0);
+  var h='';
+  if(ANNOUNCEMENT){ h+='<div class="card" style="border-color:var(--green)"><h3>📣 Update</h3><p style="margin:0">'+esc(ANNOUNCEMENT)+'</p></div>'; }
+  var hr=new Date().getHours(), part=hr<12?"Good morning":hr<17?"Good afternoon":"Good evening";
+  var sus=showUpStreak();
+  h+='<div class="card hero-card"><div class="row" style="align-items:center;gap:14px;flex-wrap:nowrap">'+
+     '<div class="mascot">'+moodEmoji()+'</div>'+
+     '<div style="flex:1;min-width:0"><h2 style="margin-bottom:2px">'+part+(S.name? ", "+esc(S.name):"")+' <span class="wave">👋</span></h2>'+
+     '<span class="level-pill">'+lvl.name+' · '+(S.points||0)+' pts</span>'+
+     (sus? ' <span class="level-pill streak-pill">🔥 '+sus+' day'+(sus===1?"":"s")+'</span>':'')+'</div></div>'+
+     (!S.name? '<div class="row" style="margin-top:12px;flex-wrap:nowrap"><input id="tName" placeholder="What should I call you?" autocomplete="given-name" />'+
+       '<button class="btn primary" id="tNameSave">Save</button></div>':'')+
+     '<p class="small" style="margin-top:10px">'+esc(companionMessage())+'</p>'+
+     (nlv? '<div class="xpbar"><i style="width:'+Math.max(4,Math.round((S.points-lvl.min)*100/(nlv.min-lvl.min)))+'%"></i></div>'+
+       '<p class="small">'+(nlv.min-S.points)+' pts to '+nlv.name+'</p>' : '<p class="small">Top level reached 👑</p>')+
+     '</div>';
+
+  var mood=(S.moods||{})[t];
+  if(!mood){
+    h+='<div class="card"><h3>How are you feeling today'+(S.name?", "+esc(S.name):"")+'?</h3><div class="mood-row">'+
+      MOODS.map(function(m){ return '<button type="button" class="mood-btn" data-mood="'+m.k+'"><span>'+m.e+'</span>'+m.l+'</button>'; }).join("")+
+      '</div></div>';
+  } else {
+    var mo=MOODS.filter(function(m){return m.k===mood;})[0]||MOODS[2];
+    h+='<div class="card mood-done"><div class="row" style="flex-wrap:nowrap;align-items:center"><div class="mood-big">'+mo.e+'</div>'+
+      '<div style="flex:1;min-width:0"><b>Feeling '+mo.l.toLowerCase()+' today</b><p class="small" style="margin:4px 0 0">'+esc(moodReply(mood))+'</p></div>'+
+      '<button class="btn sm ghost" data-moodreset="1" style="flex:0 0 auto">Change</button></div></div>';
+  }
+
+  var said=!!(S.affirmed||{})[t], mine=S.myDecl||[];
+  h+='<div class="card affirm-card'+(said?' said':'')+'"><h3>Today\'s declarations</h3>'+
+    '<p class="small">'+(said?'✨ You declared them today. Carry them with you.':'Say each one out loud, then tap the button.')+'</p><ul class="affirm-list">'+
+    mine.map(function(d,i){ return '<li class="mine">'+esc(d)+' <button class="x" data-decldel="'+i+'" aria-label="Remove">×</button></li>'; }).join("")+
+    todaysAffirmations().map(function(d){ return '<li>'+esc(d)+'</li>'; }).join("")+'</ul>'+
+    '<div class="row">'+(said?'':'<button class="btn primary" data-affirm="1">I declared them ✨</button>')+
+    '<button class="btn sm ghost" data-affnext="1">🔄 New set</button></div>'+
+    '<details class="decl-add"><summary>Add my own declaration</summary><div class="row" style="flex-wrap:nowrap;margin-top:8px">'+
+    '<input id="declNew" placeholder="e.g. I am a great mother" maxlength="140" /><button class="btn" id="declAdd">Add</button></div>'+
+    '<p class="small">Your own declarations show every day, at the top.</p></details></div>';
+
+  if(!BIBLE){ loadBible();
+    h+='<div class="card verse-card"><h3>Your verse for today</h3><p class="small">Loading…</p><div class="loadbar"><i></i></div></div>';
+  } else {
+    var ref=todaysVerseRef(), vtext=verseText(ref), isFav=favVerseKey(ref);
+    h+='<div class="card verse-card"><h3>Your verse for today</h3>'+
+      '<p class="verse-text">"'+esc(vtext)+'"</p><p class="small">— '+esc(ref.b)+' '+ref.c+':'+ref.v+'</p>'+
+      "<div class=\"row\" style=\"margin-top:8px\"><button class=\"btn sm\" data-openchap='"+JSON.stringify(ref)+"'>Read full chapter</button>"+
+      "<button class=\"btn sm\" data-favverse='"+JSON.stringify(ref)+"'>"+(isFav?"★ Saved":"☆ Save")+"</button>"+'</div></div>';
+  }
+
+  h+='<div class="card"><h3>Health tip for today</h3><p style="margin:0 0 10px">'+esc(tip[1])+'</p>'+
+     '<button class="btn sm" id="favTip">'+(S.favTips.indexOf(tip[1])>=0?"★ Saved":"☆ Save this tip")+'</button>'+
+     '<p class="small" style="margin-top:12px">General wellness information, not medical advice.</p></div>';
+
+  h+='<div class="card" style="text-align:center"><h3>Today</h3>'+ringHTML(p.pct)+
+     '<p class="small">'+p.done+' of '+p.total+' done</p></div>';
+
+  h+='<div class="card"><h3>What you need to do today</h3>';
+  if(!list.length){
+    h+='<p class="small">Nothing here yet.</p><button class="btn primary" id="seed">Add 5 suggested habits</button>';
+  } else {
+    list.forEach(function(hb,i){ h+=habitHTML(hb,t,i,list.length); });
+  }
+  h+='</div>';
+
+  var st=stepsToday(), sg=S.stepGoal||8000;
+  if(S.showSteps!==false) h+='<div class="card"><h3>👟 Steps</h3><div class="bar"><i style="width:'+Math.min(100,Math.round(st*100/sg))+'%"></i></div>'+
+     '<p class="small"><b id="todaySteps">'+st.toLocaleString()+'</b> of '+sg.toLocaleString()+' steps</p>'+
+     '<div class="row"><button class="btn sm" data-goto="steps">Open step tracker</button></div></div>';
+
+  h+='<div class="card"><h3>Water</h3>'+waterBarHTML()+
+     '<div class="row" style="margin-top:12px">'+
+     '<button class="btn sm" data-w="1">+1</button><button class="btn sm" data-w="2">+2</button>'+
+     '<button class="btn sm" data-w="-1">−1</button></div></div>';
+  return h;
+}
+function ringHTML(pct){
+  return '<div class="ring" style="background:conic-gradient(var(--green) '+(pct*3.6)+'deg, var(--line) 0)">'+
+    '<div class="inner"><div><b>'+pct+'%</b><span class="small">today</span></div></div></div>';
+}
+function habitHTML(h,date,idx,total){
+  var done=isDone(h,date), sk=isSkipped(h,date), st=streak(h);
+  var s='<div class="habit" data-h="'+h.id+'">';
+  s+='<button class="tick'+(done?" done":"")+'" data-tick="'+h.id+'">'+(done?"✓":(h.icon||"○"))+'</button>';
+  s+='<div style="flex:1;min-width:0">';
+  s+='<div class="hname">'+esc(h.name)+(sk?' <span class="small">(skipped)</span>':'')+'</div>';
+  if(h.note) s+='<div class="small">'+esc(h.note)+'</div>';
+  if(h.freq==="week"){
+    var wc=weekDoneCount(h,weekStart(date));
+    s+='<div class="chips"><span class="chip">🔥 '+st+' week'+(st===1?"":"s")+'</span>'+
+       '<span class="chip">'+wc+' of '+(h.perWeek||3)+' this week</span>'+
+       '<span class="chip">'+rate(h)+'% (12 wks)</span>'+
+       '<span class="chip">'+freqLabel(h)+'</span>'+(h.time?'<span class="chip">⏰ '+h.time+'</span>':'')+'</div>';
+  } else {
+    s+='<div class="chips"><span class="chip">🔥 '+st+' day'+(st===1?"":"s")+'</span>'+
+       '<span class="chip">best '+bestStreak(h)+'</span><span class="chip">'+rate(h)+'% this month</span>'+
+       '<span class="chip">'+freqLabel(h)+'</span>'+(h.time?'<span class="chip">⏰ '+h.time+'</span>':'')+'</div>';
+  }
+  if(h.target>1){
+    var c=(S.counts[h.id]||{})[date]||0;
+    s+='<div class="row" style="margin-top:8px"><button class="btn sm" data-minus="'+h.id+'">−</button>'+
+       '<b>'+c+' / '+h.target+'</b><button class="btn sm" data-plus="'+h.id+'">+</button></div>';
+  }
+  s+='<div class="dots">';
+  for(var i=6;i>=0;i--){ var d=addDays(date,-i);
+    s+='<div class="dot '+(isDone(h,d)?"d":isSkipped(h,d)?"s":"")+'" title="'+d+'"></div>'; }
+  s+='</div>';
+  s+='<div class="row" style="margin-top:10px">'+
+     '<button class="btn sm" data-skip="'+h.id+'">'+(sk?"Unskip":"Skip today")+'</button>'+
+     '<button class="btn sm" data-past="'+h.id+'">Past days</button>'+
+     '<button class="btn sm" data-edit="'+h.id+'">Edit</button>'+
+     (idx>0?'<button class="btn sm" data-up="'+h.id+'">↑</button>':'')+
+     (idx<total-1?'<button class="btn sm" data-down="'+h.id+'">↓</button>':'')+
+     '</div>';
+  s+='</div></div>';
+  return s;
+}
+function freqLabel(h){
+  if(h.freq==="days") return (h.days||[]).map(function(d){return DAYN[d];}).join(" ")||"pick days";
+  if(h.freq==="week") return (h.perWeek||3)+"× a week";
+  return "every day";
+}
+function waterBarHTML(){
+  var v=waterToday(), g=S.waterGoal||8, unit=S.waterUnit==="ml"?"ml":"glasses";
+  var pct=Math.min(100, g? Math.round(v*100/g):0);
+  return '<div class="bar"><i style="width:'+pct+'%"></i></div>'+
+    '<p class="small">'+v+' of '+g+' '+unit+' today</p>';
+}
+
+function pageAdd(){
+  var h='<div class="card"><h2>Add a habit</h2><p class="small">Pick from the list or write your own.</p></div>';
+  h+='<div class="card"><h3>Your own</h3>'+
+     '<label class="f">Name</label><input id="nName" placeholder="e.g. Read one chapter" />'+
+     '<div class="grid two"><div><label class="f">Icon</label><input id="nIcon" value="⭐" /></div>'+
+     '<div><label class="f">Category</label><select id="nCat">'+
+     ["health","exercise","water","sleep","study","mindfulness","money","home","people"].map(function(c){return '<option>'+c+'</option>';}).join("")+
+     '</select></div></div>'+
+     '<label class="f">How often</label><select id="nFreq"><option value="daily">Every day</option>'+
+     '<option value="days">Certain days of the week</option><option value="week">A number of times per week</option></select>'+
+     '<div id="freqExtra"></div>'+
+     '<div class="grid two"><div><label class="f">Daily target (1 = simple tick)</label><input id="nTarget" type="number" min="1" value="1" /></div>'+
+     '<div><label class="f">Start date</label><input id="nStart" type="date" value="'+today()+'" /></div></div>'+
+     '<label class="f">Remind me at (optional)</label><input id="nTime" type="time" />'+
+     '<p class="small">You\'ll get a nudge an hour before, and again right at this time.</p>'+
+     '<label class="f">Note (optional)</label><textarea id="nNote" placeholder="Why this matters to you"></textarea>'+
+     '<div class="row" style="margin-top:12px"><button class="btn primary" id="createHabit">Add habit</button></div></div>';
+  LIBRARY.forEach(function(g){
+    h+='<div class="card"><h3>'+esc(g.g)+'</h3><div class="row">';
+    g.items.forEach(function(it){ h+='<button class="btn sm" data-lib="'+esc(it[0])+'" data-icon="'+it[1]+'">'+it[1]+' '+esc(it[0])+'</button>'; });
+    h+='</div></div>';
+  });
+  var arch=S.habits.filter(function(x){return x.archived;});
+  if(arch.length){
+    h+='<div class="card"><h3>Archived</h3>';
+    arch.forEach(function(a){ h+='<div class="item row"><span style="flex:1">'+esc(a.name)+'</span>'+
+      '<button class="btn sm" data-unarch="'+a.id+'">Restore</button>'+
+      '<button class="btn sm" data-del="'+a.id+'">Delete</button></div>'; });
+    h+='</div>';
+  }
+  return h;
+}
+
+/* ---------- steps ----------
+   A normal website/PWA cannot read the all-day step total already stored in Apple Health,
+   Google Fit or Samsung Health. What it CAN do for free is use the phone's motion sensor
+   while the app is open. After the one-time motion permission on iPhone, counting starts
+   automatically whenever this app is opened or brought back to the foreground. */
+function stepsToday(){ return (S.steps||{})[today()]||0; }
+function persistSteps(){
+  saveLocal(); pushCloud();
+  if(pushConfigured()) pushStatus();
+  checkBadges();
+}
+function addSteps(n){
+  S.steps=S.steps||{};
+  var before=stepsToday();
+  S.steps[today()]=Math.max(0,before+n);
+  persistSteps();
+  var sg=S.stepGoal||8000;
+  if(n>0 && stepsToday()>=sg && before<sg) celebrate("👟","Step goal reached"+(S.name?", "+S.name:"")+"!",stepsToday().toLocaleString()+" steps today. Your heart thanks you.");
+}
+var stepSensor={on:false,base:9.8,above:false,last:0,count:0,got:false,unsupported:false};
+function updateStepNumbers(){
+  var a=document.getElementById("stepsNum"); if(a) a.textContent=stepsToday().toLocaleString();
+  var b=document.getElementById("todaySteps"); if(b) b.textContent=stepsToday().toLocaleString();
+  var c=document.getElementById("autoStepCount"); if(c) c.textContent=stepSensor.count.toLocaleString();
+}
+function recordSensorStep(){
+  S.steps=S.steps||{}; S.steps[today()]=stepsToday()+1; stepSensor.count++;
+  updateStepNumbers();
+  if(stepSensor.count%20===0) persistSteps();
+}
+function onStepMotion(e){
+  var a=e.accelerationIncludingGravity; if(!a||a.x===null||a.x===undefined) return;
+  stepSensor.got=true;
+  var m=Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z);
+  stepSensor.base=stepSensor.base*0.97+m*0.03;
+  var d=m-stepSensor.base, now=Date.now();
+  if(!stepSensor.above && d>1.3 && now-stepSensor.last>280){ stepSensor.above=true; stepSensor.last=now; recordSensorStep(); }
+  else if(stepSensor.above && d<0.3){ stepSensor.above=false; }
+}
+function attachAutoSteps(){
+  if(stepSensor.on || S.showSteps===false || !S.started || document.hidden) return;
+  if(typeof DeviceMotionEvent==="undefined"){ stepSensor.unsupported=true; return; }
+  stepSensor.on=true; stepSensor.got=false; stepSensor.base=9.8; stepSensor.above=false;
+  window.addEventListener("devicemotion",onStepMotion);
+  setTimeout(function(){
+    if(stepSensor.on && !stepSensor.got){
+      window.removeEventListener("devicemotion",onStepMotion); stepSensor.on=false;
+      if(typeof DeviceMotionEvent.requestPermission==="function" && S.motionAllowed){ S.motionAllowed=false; saveLocal(); }
+      if(tab==="steps") render();
+    }
+  },3500);
+}
+function startAutoSteps(){
+  if(S.showSteps===false || !S.started || document.hidden) return;
+  if(typeof DeviceMotionEvent==="undefined"){ stepSensor.unsupported=true; return; }
+  /* iPhone requires the first permission request to come from a tap. After that we
+     remember the user's choice and try to resume automatically on later opens. */
+  if(typeof DeviceMotionEvent.requestPermission==="function" && !S.motionAllowed) return;
+  attachAutoSteps();
+}
+function enableAutoSteps(){
+  if(typeof DeviceMotionEvent==="undefined"){
+    stepSensor.unsupported=true; toast("This phone/browser does not provide motion data to websites."); render(); return;
+  }
+  if(typeof DeviceMotionEvent.requestPermission==="function"){
+    DeviceMotionEvent.requestPermission().then(function(r){
+      if(r!=="granted"){ toast("Motion access was not allowed. You can still enter your step total manually."); return; }
+      S.motionAllowed=true; saveLocal(); attachAutoSteps(); render(); toast("✅ Automatic step counting is on");
+    }).catch(function(){ toast("Motion access was not allowed."); });
+  } else {
+    S.motionAllowed=true; saveLocal(); attachAutoSteps(); render(); toast("✅ Automatic step counting is on");
+  }
+}
+function stopAutoSteps(){
+  if(stepSensor.on) window.removeEventListener("devicemotion",onStepMotion);
+  stepSensor.on=false; persistSteps();
+}
+function pageSteps(){
+  var st=stepsToday(), sg=S.stepGoal||8000, pct=Math.min(100,Math.round(st*100/sg));
+  var needsTap=(typeof DeviceMotionEvent!=="undefined" && typeof DeviceMotionEvent.requestPermission==="function" && !S.motionAllowed);
+  var h='<div class="card" style="text-align:center"><h2>👟 Steps today</h2>'+ 
+    '<div class="ring" style="background:conic-gradient(var(--pink) '+(pct*3.6)+'deg, var(--line) 0)"><div class="inner"><div><b id="stepsNum">'+st.toLocaleString()+'</b><span class="small">of '+sg.toLocaleString()+'</span></div></div></div>'+ 
+    '<p class="small">'+(st>=sg?"Goal reached today! 🎉":(sg-st).toLocaleString()+" steps to go")+'</p></div>';
+
+  h+='<div class="card"><h3>📱 Automatic phone counting</h3>'+ 
+    (stepSensor.on
+      ? '<p class="sync-status on">✅ Counting while the app is open · <span id="autoStepCount">'+stepSensor.count.toLocaleString()+'</span> detected this session</p>'
+      : needsTap
+        ? '<p class="sync-status">One-time permission needed</p>'
+        : stepSensor.unsupported
+          ? '<p class="sync-status">Motion sensor unavailable in this browser</p>'
+          : '<p class="sync-status on">✅ Automatic counting is ready</p>')+
+    '<p class="small">No extra app, account or payment is needed. After permission is allowed, the tracker starts counting motion automatically whenever you open it.</p>'+ 
+    (needsTap?'<div class="row"><button class="btn primary" id="stepAutoEnable">Enable automatic counting</button></div>':'')+
+    '<p class="small" style="margin-top:10px">Important: iPhone and Android browsers do not give websites the step total already stored in Apple Health, Google Fit or Samsung Health. This free web version can count movement while it is open; if your phone\'s Health/Fit total is higher, you can adjust today\'s total below.</p></div>';
+
+  h+='<div class="card"><h3>Adjust today\'s total</h3>'+ 
+    '<p class="small">Use this only when you want the tracker to match the number shown in your phone\'s health app.</p>'+ 
+    '<div class="row" style="flex-wrap:nowrap"><input id="stepTotal" type="number" inputmode="numeric" min="0" value="'+st+'" />'+ 
+    '<button class="btn" id="stepSet">Update</button></div></div>';
+
+  var bars='<div class="bars">', wk=0, mx=sg;
+  for(var i=6;i>=0;i--){ var d=addDays(today(),-i); var v=(S.steps||{})[d]||0; wk+=v; if(v>mx) mx=v; }
+  for(var j=6;j>=0;j--){ var d2=addDays(today(),-j); var v2=(S.steps||{})[d2]||0;
+    bars+='<div><i style="height:'+Math.round(v2*100/mx)+'%;background:linear-gradient(var(--pink),var(--green))"></i><span>'+DAYN[weekdayOf(d2)][0]+'</span></div>'; }
+  bars+='</div><div style="height:22px"></div>';
+  h+='<div class="card"><h3>Last 7 days</h3>'+bars+'<p class="small">'+wk.toLocaleString()+' steps this week · average '+Math.round(wk/7).toLocaleString()+' a day</p></div>';
+  h+='<div class="card"><h3>Daily goal</h3><div class="row" style="flex-wrap:nowrap"><input id="stepGoal" type="number" inputmode="numeric" min="500" step="500" value="'+sg+'" />'+ 
+    '<button class="btn" id="stepGoalSave">Save</button></div><p class="small">Choose a goal that feels realistic for you.</p></div>';
+  return h;
+}
+function weekStats(start){
+  var r={done:0,total:0,best:null,bestPct:-1,steps:0,water:0,ex:0,moods:[],aff:0};
+  for(var i=0;i<7;i++){ var d=addDays(start,i); if(d>today()) break; var p=dayProgress(d);
+    r.done+=p.done; r.total+=p.total; if(p.total && p.pct>r.bestPct){ r.bestPct=p.pct; r.best=d; }
+    r.steps+=(S.steps||{})[d]||0; if((S.water[d]||0)>=S.waterGoal) r.water++;
+    if((S.affirmed||{})[d]) r.aff++; var mk=(S.moods||{})[d];
+    r.moods.push(mk? (MOODS.filter(function(m){return m.k===mk;})[0]||{e:"·"}).e : "·"); }
+  S.exercise.forEach(function(e){ if(e.date>=start && e.date<=addDays(start,6)) r.ex+=e.minutes; });
+  r.pct=r.total? Math.round(r.done*100/r.total):0; return r;
+}
+function weekSummaryHTML(r,prev){
+  if(prev && !prev.total) prev=null;
+  var diff=prev? r.pct-prev.pct : 0;
+  return '<div class="sum-grid">'+
+    '<div><b>'+r.pct+'%</b><span>habits done'+(prev? '<br>'+(diff>=0?'▲ ':'▼ ')+Math.abs(diff)+'% vs last week':'')+'</span></div>'+
+    '<div><b>'+r.steps.toLocaleString()+'</b><span>steps</span></div>'+
+    '<div><b>'+r.water+'/7</b><span>water goal days</span></div>'+
+    '<div><b>'+r.ex+'</b><span>exercise minutes</span></div>'+
+    '<div><b>'+r.aff+'/7</b><span>declarations said</span></div>'+
+    '<div><b>'+(r.best? DAYN[weekdayOf(r.best)]:"–")+'</b><span>best day</span></div></div>'+
+    '<p class="small" style="margin-top:10px">Moods: <span style="font-size:18px;letter-spacing:4px">'+r.moods.join("")+'</span></p>';
+}
+function maybeShowWeeklySummary(){
+  var ws=weekStart(today()); if(S.lastWeekShown===ws) return;
+  var last=weekStats(addDays(ws,-7)); S.lastWeekShown=ws; saveLocal();
+  if(!last.total && !last.steps && !last.aff) return;
+  openDialog('<div class="celebrate"><div class="cele-emoji">📊</div><h2>Your week in review'+(S.name?", "+esc(S.name):"")+'</h2>'+
+    weekSummaryHTML(last, weekStats(addDays(ws,-14)))+
+    '<p>'+(last.pct>=70?"What a week! Keep that rhythm going.":last.pct>=40?"Solid effort. Let's aim a little higher this week.":"A fresh week, a fresh start. You've got this.")+'</p>'+
+    '<button class="btn primary" onclick="closeDialog()">Start this week 💪</button></div>');
+}
+function pageProgress(){
+  var list=activeHabits();
+  var h='<div class="card"><h2>Progress</h2><p class="small">Your last weeks at a glance.</p></div>';
+  var ws0=weekStart(today());
+  h+='<div class="card"><h3>This week so far</h3>'+weekSummaryHTML(weekStats(ws0), weekStats(addDays(ws0,-7)))+'</div>';
+  h+='<div class="card"><h3>Badges</h3><div class="badge-grid">'+
+    BADGES.map(function(b){
+      var got=S.badges.indexOf(b.id)>=0;
+      return '<div class="badge'+(got?"":" locked")+'"><div class="ic">'+b.icon+'</div>'+
+        '<div style="font-size:12px;font-weight:600;margin-top:4px">'+esc(b.name)+'</div>'+
+        '<div class="small">'+(got?esc(b.desc):"Locked")+'</div></div>';
+    }).join("")+
+    '</div></div>';
+  var bars='<div class="bars">';
+  for(var i=6;i>=0;i--){ var d=addDays(today(),-i); var p=dayProgress(d);
+    bars+='<div><i style="height:'+p.pct+'%"></i><span>'+DAYN[weekdayOf(d)][0]+'</span></div>'; }
+  bars+='</div><div style="height:22px"></div>';
+  h+='<div class="card"><h3>This week</h3>'+bars+'</div>';
+  var cells='';
+  var start=addDays(today(),-83);
+  for(var k=0;k<84;k++){ var dd=addDays(start,k); var pp=dayProgress(dd);
+    var op = pp.total? (0.15+0.85*pp.pct/100) : 0;
+    cells+='<div style="background:'+(op? 'color-mix(in oklab, var(--green) '+Math.round(op*100)+'%, var(--line))':'var(--line)')+'" title="'+dd+' — '+pp.pct+'%"></div>'; }
+  h+='<div class="card"><h3>Last 12 weeks</h3><div class="heat">'+cells+'</div>'+
+     '<p class="small">Darker green means more habits completed that day.</p></div>';
+  var m30=0,c30=0;
+  for(var j=0;j<30;j++){ var dj=addDays(today(),-j); var pj=dayProgress(dj); m30+=pj.total; c30+=pj.done; }
+  h+='<div class="card"><h3>Last 30 days</h3><p>'+c30+' completions out of '+m30+' ('+(m30?Math.round(c30*100/m30):0)+'%).</p></div>';
+  h+='<div class="card"><h3>Each habit</h3>';
+  if(!list.length) h+='<p class="small">No habits yet.</p>';
+  list.forEach(function(hb){
+    h+='<div class="item"><b>'+(hb.icon||"")+' '+esc(hb.name)+'</b><br><span class="small">current '+streak(hb)+
+       ' · best '+bestStreak(hb)+' · '+rate(hb)+'% of the last 30 days</span></div>';
+  });
+  h+='</div>';
+  h+='<div class="card"><h3>Your data</h3><div class="row">'+
+     '<button class="btn" id="expJson">Export as JSON</button>'+
+     '<button class="btn" id="expCsv">Export as CSV</button></div>'+
+     '<p class="small">Everything stays on this device. Export keeps a copy you own.</p></div>';
+  return h;
+}
+
+function pageWater(){
+  var h='<div class="card"><h2>Drink water</h2>'+waterBarHTML()+
+    '<div class="row" style="margin-top:12px">';
+  var steps = S.waterUnit==="ml" ? [250,500,-250] : [1,2,-1];
+  steps.forEach(function(n){ h+='<button class="btn" data-w="'+n+'">'+(n>0?"+":"")+n+'</button>'; });
+  h+='</div></div>';
+  h+='<div class="card"><h3>Your goal</h3>'+
+     '<label class="f">Measured in</label><div class="switch">'+
+     '<button data-wu="glasses" class="'+(S.waterUnit!=="ml"?"on":"")+'">Glasses</button>'+
+     '<button data-wu="ml" class="'+(S.waterUnit==="ml"?"on":"")+'">Millilitres</button></div>'+
+     '<label class="f">Daily goal</label><input id="wGoal" type="number" min="1" value="'+(S.waterGoal||8)+'" />'+
+     '<div class="row" style="margin-top:10px"><button class="btn primary" id="saveWater">Save</button></div></div>';
+  var h7='<div class="bars">';
+  for(var i=6;i>=0;i--){ var d=addDays(today(),-i); var v=S.water[d]||0;
+    var pct=Math.min(100, S.waterGoal? Math.round(v*100/S.waterGoal):0);
+    h7+='<div><i style="height:'+pct+'%"></i><span>'+DAYN[weekdayOf(d)][0]+'</span></div>'; }
+  h7+='</div><div style="height:22px"></div>';
+  h+='<div class="card"><h3>This week</h3>'+h7+'</div>';
+  return h;
+}
+
+function pageMove(){
+  var wk=0, since=addDays(today(),-6);
+  S.exercise.forEach(function(e){ if(e.date>=since) wk+=Number(e.minutes)||0; });
+  var pct=Math.min(100, S.exerciseGoal? Math.round(wk*100/S.exerciseGoal):0);
+  var h='<div class="card"><h2>Exercise</h2><div class="bar"><i style="width:'+pct+'%"></i></div>'+
+    '<p class="small">'+wk+' of '+S.exerciseGoal+' minutes this week</p></div>';
+  h+='<div class="card"><h3>Log a session</h3>'+
+    '<label class="f">Type</label><select id="eKind">'+
+    ["Walking","Running","Workout","Stretching","Yoga","Cycling","Swimming","Football","Dancing","Other"]
+      .map(function(k){return '<option>'+k+'</option>';}).join("")+'</select>'+
+    '<div class="grid two"><div><label class="f">Minutes</label><input id="eMin" type="number" min="1" value="30" /></div>'+
+    '<div><label class="f">Date</label><input id="eDate" type="date" value="'+today()+'" /></div></div>'+
+    '<label class="f">Note (optional)</label><input id="eNote" placeholder="How did it feel?" />'+
+    '<div class="row" style="margin-top:12px"><button class="btn primary" id="logEx">Save session</button></div></div>';
+  h+='<div class="card"><h3>Weekly goal</h3><label class="f">Minutes per week</label>'+
+     '<input id="eGoal" type="number" min="10" value="'+S.exerciseGoal+'" />'+
+     '<div class="row" style="margin-top:10px"><button class="btn" id="saveEGoal">Save goal</button></div></div>';
+  h+='<div class="card"><h3>Recent sessions</h3><div class="list">';
+  var recent=S.exercise.slice().sort(function(a,b){return a.date<b.date?1:-1;}).slice(0,25);
+  if(!recent.length) h+='<p class="small">Nothing logged yet.</p>';
+  recent.forEach(function(e,i){
+    h+='<div class="item row"><span style="flex:1">'+esc(e.kind)+' · '+e.minutes+' min · '+e.date+
+       (e.note?' — '+esc(e.note):'')+'</span><button class="btn sm" data-exdel="'+e.id+'">Remove</button></div>';
+  });
+  h+='</div></div>';
+  return h;
+}
+
+function pageTips(){
+  var t=tipOfDay();
+  var h='<div class="card"><h2>Today\'s health tip</h2><p style="margin:0 0 10px">'+esc(t[1])+'</p>'+
+    '<button class="btn sm" id="favTip2">'+(S.favTips.indexOf(t[1])>=0?"★ Saved":"☆ Save this tip")+'</button>'+
+    '<p class="small" style="margin-top:10px">A new tip is delivered here, and as a notification, once a day — this isn\'t a list to browse.</p></div>';
+  if(S.favTips.length){
+    h+='<div class="card"><h3>Your saved tips</h3>';
+    S.favTips.forEach(function(x){ h+='<div class="item row"><span style="flex:1">'+esc(x)+'</span>'+
+      '<button class="btn sm" data-unfav="'+esc(x).slice(0,60)+'">Remove</button></div>'; });
+    h+='</div>';
+  }
+  h+='<div class="card"><p class="small">General wellness information, not medical advice. '+
+     'Speak to a health professional about anything that concerns you.</p></div>';
+  return h;
+}
+
+/* ---------- Bible verse (King James Version, public domain, bundled with the app — no server, no account) ---------- */
+var BIBLE=null, BIBLE_LOADING=false, BIBLE_INDEX={};
+var NOTABLE=[
+{b:"John",c:3,v:16},{b:"Philippians",c:4,v:13},{b:"Jeremiah",c:29,v:11},{b:"Psalms",c:23,v:1},
+{b:"Proverbs",c:3,v:5},{b:"Proverbs",c:3,v:6},{b:"Romans",c:8,v:28},{b:"Isaiah",c:41,v:10},
+{b:"Joshua",c:1,v:9},{b:"Psalms",c:46,v:1},{b:"Matthew",c:11,v:28},{b:"2 Corinthians",c:5,v:17},
+{b:"Galatians",c:6,v:9},{b:"1 Corinthians",c:13,v:4},{b:"1 Corinthians",c:13,v:13},{b:"Psalms",c:37,v:4},
+{b:"Proverbs",c:16,v:3},{b:"Isaiah",c:40,v:31},{b:"Romans",c:12,v:2},{b:"Philippians",c:4,v:6},
+{b:"Philippians",c:4,v:7},{b:"Psalms",c:34,v:18},{b:"Deuteronomy",c:31,v:6},{b:"2 Timothy",c:1,v:7},
+{b:"James",c:1,v:2},{b:"James",c:1,v:5},{b:"1 Peter",c:5,v:7},{b:"Hebrews",c:11,v:1},
+{b:"Hebrews",c:13,v:5},{b:"Psalms",c:139,v:14},{b:"Psalms",c:118,v:24},{b:"Psalms",c:27,v:1},
+{b:"Psalms",c:91,v:1},{b:"Psalms",c:55,v:22},{b:"Matthew",c:6,v:33},{b:"Matthew",c:6,v:34},
+{b:"Matthew",c:7,v:7},{b:"John",c:14,v:27},{b:"John",c:16,v:33},{b:"John",c:15,v:5},
+{b:"Romans",c:15,v:13},{b:"Romans",c:8,v:31},{b:"Romans",c:5,v:8},{b:"Ephesians",c:2,v:8},
+{b:"Ephesians",c:2,v:10},{b:"Ephesians",c:3,v:20},{b:"Ephesians",c:6,v:10},{b:"Colossians",c:3,v:23},
+{b:"1 Thessalonians",c:5,v:16},{b:"1 Thessalonians",c:5,v:17},{b:"1 Thessalonians",c:5,v:18},
+{b:"Galatians",c:5,v:22},{b:"Isaiah",c:26,v:3},{b:"Isaiah",c:43,v:2},{b:"Isaiah",c:53,v:5},
+{b:"Micah",c:6,v:8},{b:"Habakkuk",c:3,v:19},{b:"Nahum",c:1,v:7},{b:"Zephaniah",c:3,v:17},
+{b:"Lamentations",c:3,v:22},{b:"Lamentations",c:3,v:23},{b:"Psalms",c:16,v:11},{b:"Psalms",c:19,v:14},
+{b:"Psalms",c:30,v:5},{b:"Psalms",c:31,v:24},{b:"Psalms",c:32,v:8},{b:"Psalms",c:40,v:1},
+{b:"Psalms",c:42,v:11},{b:"Psalms",c:56,v:3},{b:"Psalms",c:62,v:1},{b:"Psalms",c:84,v:11},
+{b:"Psalms",c:94,v:19},{b:"Psalms",c:100,v:5},{b:"Psalms",c:103,v:2},{b:"Psalms",c:107,v:1},
+{b:"Psalms",c:121,v:1},{b:"Psalms",c:121,v:2},{b:"Psalms",c:126,v:5},{b:"Psalms",c:143,v:8},
+{b:"Psalms",c:147,v:3},{b:"Proverbs",c:4,v:23},{b:"Proverbs",c:11,v:25},{b:"Proverbs",c:17,v:22},
+{b:"Proverbs",c:18,v:10},{b:"Proverbs",c:19,v:21},{b:"Proverbs",c:31,v:25},{b:"Ecclesiastes",c:3,v:1},
+{b:"Isaiah",c:12,v:2},{b:"Isaiah",c:30,v:21},{b:"Isaiah",c:54,v:17},{b:"Jeremiah",c:17,v:7},
+{b:"Jeremiah",c:33,v:3},{b:"Ezekiel",c:36,v:26},{b:"Malachi",c:3,v:10},{b:"Matthew",c:5,v:16},
+{b:"Matthew",c:5,v:9},{b:"Matthew",c:19,v:26},{b:"Mark",c:11,v:24},{b:"Luke",c:1,v:37},
+{b:"John",c:1,v:1},{b:"John",c:8,v:32},{b:"John",c:10,v:10},{b:"John",c:13,v:34},
+{b:"Acts",c:1,v:8},{b:"Romans",c:10,v:9},{b:"Romans",c:12,v:12},{b:"1 Corinthians",c:10,v:13},
+{b:"1 Corinthians",c:15,v:58},{b:"2 Corinthians",c:4,v:16},{b:"2 Corinthians",c:9,v:8},{b:"2 Corinthians",c:12,v:9},
+{b:"Galatians",c:2,v:20},{b:"Ephesians",c:4,v:32},{b:"Ephesians",c:5,v:20},{b:"Philippians",c:1,v:6},
+{b:"Philippians",c:2,v:3},{b:"Philippians",c:4,v:19},{b:"Colossians",c:3,v:2},{b:"1 Timothy",c:4,v:12},
+{b:"2 Timothy",c:4,v:7},{b:"Titus",c:3,v:5},{b:"Hebrews",c:4,v:16},{b:"Hebrews",c:12,v:1},
+{b:"Hebrews",c:12,v:2},{b:"James",c:4,v:8},{b:"James",c:4,v:10},{b:"1 Peter",c:2,v:9},
+{b:"1 Peter",c:3,v:15},{b:"2 Peter",c:1,v:3},{b:"1 John",c:1,v:9},{b:"1 John",c:4,v:18},
+{b:"1 John",c:4,v:19},{b:"Jude",c:1,v:24},{b:"Revelation",c:21,v:4}
+];
+function loadBible(){
+  if(BIBLE || BIBLE_LOADING) return;
+  BIBLE_LOADING=true;
+  fetch("./bible-kjv.min.json").then(function(r){ if(!r.ok) throw new Error("bad response"); return r.json(); })
+    .then(function(data){
+      BIBLE=data; BIBLE.forEach(function(bk,i){ BIBLE_INDEX[bk.n]=i; });
+      BIBLE_LOADING=false;
+      if(tab==="verse"||tab==="today") render();
+    })
+    .catch(function(){
+      BIBLE_LOADING=false;
+      if(tab==="verse"){ toast("Could not load the Bible text. Connect once, then it works offline."); }
+    });
+}
+function verseText(ref){
+  var bi=BIBLE_INDEX[ref.b]; if(bi===undefined || !BIBLE) return "";
+  var ch=BIBLE[bi].c[ref.c-1]||[]; return ch[ref.v-1]||"";
+}
+function chapterVerses(b,c){
+  var bi=BIBLE_INDEX[b]; if(bi===undefined || !BIBLE) return [];
+  return BIBLE[bi].c[c-1]||[];
+}
+function hashStr(s){ var h=0; for(var i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))|0; } return h; }
+var SESSION_VERSE=null;
+function todaysVerseRef(){
+  /* one verse per person per day: the same all day, a new one tomorrow */
+  var rnd=seededRand(hashStr((S.deviceId||"x")+":verse:"+today()));
+  return NOTABLE[Math.floor(rnd()*NOTABLE.length)];
+}
+function newVerse(){ var cur=SESSION_VERSE, n=0;
+  do{ SESSION_VERSE=NOTABLE[Math.floor(Math.random()*NOTABLE.length)]; n++; }while(SESSION_VERSE===cur && n<10); }
+function favVerseKey(ref){ return (S.favVerses||[]).some(function(v){return v.b===ref.b&&v.c===ref.c&&v.v===ref.v;}); }
+function openChapter(ref){
+  var verses=chapterVerses(ref.b,ref.c);
+  if(!verses.length){ toast("That chapter could not be found."); return; }
+  var rows=verses.map(function(txt,i){
+    var n=i+1, hit=(n===ref.v);
+    return '<p style="margin:0 0 10px"><span class="vnum">'+n+'</span>'+
+      (hit? '<b style="background:var(--green-soft);padding:2px 4px;border-radius:6px">'+esc(txt)+'</b>' : esc(txt))+'</p>';
+  }).join("");
+  openDialog('<h2>'+esc(ref.b)+' '+ref.c+'</h2><div class="list" style="max-height:60vh">'+rows+'</div>'+
+    '<div class="row" style="margin-top:14px"><button class="btn primary" onclick="closeDialog()">Close</button></div>');
+}
+function pageVerse(){
+  if(!BIBLE){
+    loadBible();
+    return '<div class="card"><h2>Daily Verse</h2>'+
+      '<p class="small">Loading the full Bible text (King James Version) — about 4.5&nbsp;MB, only needed once. After this it works completely offline, with nothing sent to any server.</p>'+
+      '<div class="loadbar"><i></i></div></div>';
+  }
+  var ref=todaysVerseRef(), text=verseText(ref), isFav=favVerseKey(ref);
+  var h='<div class="card verse-card"><h3>Your verse for today</h3>'+
+    '<p class="verse-text">"'+esc(text)+'"</p>'+
+    '<p class="small">— '+esc(ref.b)+' '+ref.c+':'+ref.v+'</p>'+
+    '<div class="row" style="margin-top:10px">'+
+    "<button class=\"btn sm\" data-openchap='"+JSON.stringify(ref)+"'>Read full chapter</button>"+
+    "<button class=\"btn sm\" data-favverse='"+JSON.stringify(ref)+"'>"+(isFav?"★ Saved":"☆ Save")+"</button>"+
+    '<button class="btn sm" id="vSurprise">Surprise me</button>'+
+    '</div></div>';
+  if((S.favVerses||[]).length){
+    h+='<div class="card"><h3>Saved verses</h3>';
+    S.favVerses.forEach(function(v){
+      h+='<div class="item row"><span style="flex:1">'+esc(v.b)+' '+v.c+':'+v.v+'</span>'+
+         "<button class=\"btn sm\" data-openchap='"+JSON.stringify(v)+"'>Read</button>"+
+         "<button class=\"btn sm\" data-unfavverse='"+JSON.stringify(v)+"'>Remove</button></div>";
+    });
+    h+='</div>';
+  }
+  h+='<div class="card"><h3>Read any chapter</h3><div class="grid two">'+
+     '<div><label class="f">Book</label><select id="vBook">'+
+       BIBLE.map(function(bk){return '<option>'+esc(bk.n)+'</option>';}).join("")+
+     '</select></div>'+
+     '<div><label class="f">Chapter</label><select id="vChapter"></select></div></div>'+
+     '<div class="row" style="margin-top:10px"><button class="btn primary" id="vGo">Open chapter</button></div></div>';
+  h+='<div class="card"><p class="small">King James Version (public domain). The full text is stored inside this app — no internet needed after the first load, and nothing about which verses you read is sent anywhere.</p></div>';
+  return h;
+}
+
+function sectionHead(icon,label){ return '<div class="settings-section"><span>'+icon+'</span>'+label+'</div>'; }
+function pageSettings(){
+  var h='';
+  h+=sectionHead("👤","Profile");
+  if(fbReady() && fbUser){
+    h+='<div class="card"><p class="small" style="margin:0 0 4px">Signed in as <b>'+esc(fbUser.email)+'</b></p>'+
+       '<p class="small" style="margin:0">Your habits follow you to any device you sign in on.</p>'+
+       '<div class="row" style="margin-top:10px"><button class="btn" id="signOutBtn">Sign out</button></div></div>';
+  }
+  h+='<div class="card"><label class="f">What should I call you?</label>'+
+     '<input id="sName" value="'+esc(S.name)+'" placeholder="Your name" />'+
+     '<div class="row" style="margin-top:10px"><button class="btn primary" id="saveName">Save</button></div></div>';
+
+  h+=sectionHead("⏰","Reminders & alarms");
+  h+='<div class="card">'+
+     '<div class="switch"><button id="remOn" class="'+(S.reminders?"on":"")+'">On</button>'+
+     '<button id="remOff" class="'+(!S.reminders?"on":"")+'">Off</button></div>'+
+     '<label class="f">Reminder time</label><input id="remTime" type="time" value="'+(S.reminderTime||"08:00")+'" />'+
+     '<div class="row" style="margin-top:10px"><button class="btn primary" id="saveRem">Save reminder time</button></div>'+
+     '<p class="small" style="margin-top:10px">Your daily reminder uses the time above. Habits with their own time also get an hour-before reminder and an on-time reminder.</p>'+
+     (pushConfigured()?
+       (PUSH_ACTIVE? '<p class="small"><b>✅ Alarms are on for this phone</b> — they arrive even when the app is closed.</p>'
+         : '<div class="row"><button class="btn primary" id="permBtn">🔔 Turn on alarms for this phone</button></div>'+
+           '<p class="small">On iPhone, first add the app to your Home Screen (Share → Add to Home Screen) and open it from there.</p>')
+       : '')+'</div>';
+
+  h+=sectionHead("🎯","Habits & tracking");
+  h+='<div class="card"><h3 style="font-size:15px">Step tracker</h3>'+
+     '<p class="small">When enabled, the app uses your phone\'s motion sensor to count steps automatically while the app is open. No extra app or subscription is needed.</p>'+
+     '<div class="switch"><button id="stepsOn" class="'+(S.showSteps!==false?"on":"")+'">On</button>'+
+     '<button id="stepsOff" class="'+(S.showSteps===false?"on":"")+'">Off</button></div></div>';
+  h+='<div class="card"><h3 style="font-size:15px">Setup questions</h3><p class="small">Go through the welcome questions again to rebuild your starting habits.</p>'+
+     '<div class="row"><button class="btn" id="redoSetup">Redo the setup questions</button></div></div>';
+
+  h+=sectionHead("🎨","Appearance");
+  h+='<div class="card"><div class="switch">'+
+     ["light","dark","system"].map(function(t){return '<button data-theme="'+t+'" class="'+(S.theme===t?"on":"")+'">'+t+'</button>';}).join("")+
+     '</div></div>';
+  h+='<div class="card"><p class="small">Add this app to your home screen so it opens like a normal app and works offline.</p>'+
+     '<div class="row"><button class="btn" id="installBtn2">Install / Add to Home Screen</button></div></div>';
+
+  h+=sectionHead("💬","Feedback");
+  h+='<div class="card"><p class="small">Goes straight to the app admin.</p>'+
+     '<label class="f">Your name (optional)</label><input id="sugName" placeholder="Optional" />'+
+     '<label class="f">Your message</label><textarea id="sugText" placeholder="Tell us what would make this app better"></textarea>'+
+     '<div class="row" style="margin-top:10px"><button class="btn primary" id="sugSend">Send</button></div></div>';
+  if(fbIsAdmin){
+    h+='<div class="card"><h3 style="font-size:15px">Admin</h3><p class="small">Suggestions, visitor count, updates.</p>'+
+       '<div class="row"><button class="btn" id="adminBtn">Open admin</button></div></div>';
+  }
+
+  h+=sectionHead("🔒","Data & privacy");
+  h+='<div class="card"><div class="row">'+
+     '<button class="btn" id="expJson">Export JSON</button><button class="btn" id="expCsv">Export CSV</button>'+
+     '<button class="btn" id="importBtn">Import JSON</button></div>'+
+     '<input type="file" id="fileIn" accept="application/json" class="hide" />'+
+     '<p class="small">'+(fbReady()?
+       '🔒 Your habits, moods, declarations, steps, water and exercise are encrypted on your phone with a key made from your password before they are saved online. Nobody else can read them, not even the app admin. The app also works offline and syncs when you are back online. A suggestion you send, and an anonymous visit count, are the only things the admin can see.' :
+       'Everything is saved only in this browser on this device. Nothing is sent anywhere.')+'</p>'+
+     '<div class="row" style="margin-top:10px"><button class="btn" id="wipe">Erase everything</button></div></div>';
+
+  h+='<div class="card" style="text-align:center"><p class="small" style="margin:0">Free forever. No subscription, no premium, no ads, no hidden charges.</p></div>';
+  return h;
+}
+
+/* ---------- render ---------- */
+function render(){
+  applyTheme();
+  var m=document.getElementById("main");
+  if(appPhase==="loading"){
+    document.getElementById("bottomNav").innerHTML=""; document.getElementById("sideNav").innerHTML="";
+    m.innerHTML=pageLoading(); return;
+  }
+  if(appPhase==="auth"){
+    document.getElementById("bottomNav").innerHTML=""; document.getElementById("sideNav").innerHTML="";
+    m.innerHTML=pageAuthGate(); wireAuthGate(); return;
+  }
+  if(tab==="onboard"){
+    document.getElementById("bottomNav").innerHTML=""; document.getElementById("sideNav").innerHTML="";
+    m.innerHTML=pageOnboard();
+    m.insertAdjacentHTML("beforeend",
+      '<footer>© '+new Date().getFullYear()+' Ekponbor Ese Laureta. Ese Daily Habit Tracker — all rights reserved. (build 17)</footer>');
+    wire(); return;
+  }
+  drawNav();
+  var PT={today:["Today","Your day at a glance"],add:["Add a habit","Pick from ideas or write your own"],progress:["Progress","Streaks, calendar and summaries"],
+    water:["Water","Sip by sip through the day"],steps:["Steps","Automatic counting, goal and history"],move:["Exercise","Log movement and your weekly goal"],
+    verse:["Verse","Today's word for you"],tips:["Health tips","Small daily wellness ideas"],admin:["Admin","Usage and messages"],settings:["Settings","Make it yours"]}[tab]||["",""];
+  m.innerHTML = (PT[0]?'<div class="page-head"><h1>'+PT[0]+'</h1><p>'+PT[1]+'</p></div>':'') + (tab==="today"?pageToday(): tab==="add"?pageAdd(): tab==="progress"?pageProgress():
+                tab==="water"?pageWater(): tab==="steps"?pageSteps(): tab==="move"?pageMove(): tab==="verse"?pageVerse():
+                tab==="tips"?pageTips(): tab==="admin"?pageAdmin(): pageSettings());
+  m.insertAdjacentHTML("beforeend",
+    '<footer>© '+new Date().getFullYear()+' Ekponbor Ese Laureta. Ese Daily Habit Tracker — all rights reserved. (build 17)</footer>');
+  wire();
+  startAutoSteps();
+  checkMilestones();
+  if(tab==="today" && !window._weekChecked){ window._weekChecked=true; setTimeout(maybeShowWeeklySummary,1200); }
+}
+
+function wire(){
+  var q=function(s){return document.getElementById(s);};
+  document.querySelectorAll("[data-tick]").forEach(function(b){ b.onclick=function(){
+    var h=find(b.dataset.tick); setDone(h,today(),!isDone(h,today())); render(); }; });
+  document.querySelectorAll("[data-plus]").forEach(function(b){ b.onclick=function(){ bump(find(b.dataset.plus),today(),1); render(); }; });
+  document.querySelectorAll("[data-minus]").forEach(function(b){ b.onclick=function(){ bump(find(b.dataset.minus),today(),-1); render(); }; });
+  document.querySelectorAll("[data-skip]").forEach(function(b){ b.onclick=function(){
+    var h=find(b.dataset.skip); S.skips[h.id]=S.skips[h.id]||{};
+    if(S.skips[h.id][today()]) delete S.skips[h.id][today()]; else S.skips[h.id][today()]=true;
+    save(); render(); }; });
+  document.querySelectorAll("[data-past]").forEach(function(b){ b.onclick=function(){ pastDays(find(b.dataset.past)); }; });
+  document.querySelectorAll("[data-edit]").forEach(function(b){ b.onclick=function(){ editHabit(find(b.dataset.edit)); }; });
+  document.querySelectorAll("[data-up]").forEach(function(b){ b.onclick=function(){ move(b.dataset.up,-1); }; });
+  document.querySelectorAll("[data-down]").forEach(function(b){ b.onclick=function(){ move(b.dataset.down,1); }; });
+  document.querySelectorAll("[data-w]").forEach(function(b){ b.onclick=function(){ addWater(Number(b.dataset.w)); }; });
+  document.querySelectorAll("[data-lib]").forEach(function(b){ b.onclick=function(){
+    addHabit({name:b.dataset.lib, icon:b.dataset.icon}); toast("Added "+b.dataset.lib); render(); }; });
+  document.querySelectorAll("[data-unarch]").forEach(function(b){ b.onclick=function(){
+    find(b.dataset.unarch).archived=false; save(); syncAlarmPlanNow(); render(); }; });
+  document.querySelectorAll("[data-del]").forEach(function(b){ b.onclick=function(){
+    S.habits=S.habits.filter(function(x){return x.id!==b.dataset.del;}); save(); syncAlarmPlanNow(); render(); }; });
+  document.querySelectorAll("[data-exdel]").forEach(function(b){ b.onclick=function(){
+    S.exercise=S.exercise.filter(function(x){return x.id!==b.dataset.exdel;}); save(); render(); }; });
+  document.querySelectorAll("button[data-theme]").forEach(function(b){ b.onclick=function(){
+    S.theme=b.dataset.theme; save(); render(); }; });
+  document.querySelectorAll("[data-wu]").forEach(function(b){ b.onclick=function(){
+    S.waterUnit=b.dataset.wu; S.waterGoal = b.dataset.wu==="ml"?2000:8; save(); render(); }; });
+  document.querySelectorAll("[data-fav]").forEach(function(b){ b.onclick=function(){
+    var v=b.dataset.fav, i=-1;
+    TIPS.forEach(function(t){ if(t[1].replace(/"/g,"").indexOf(v)===0) v=t[1]; });
+    i=S.favTips.indexOf(v); if(i>=0) S.favTips.splice(i,1); else S.favTips.push(v); save(); render(); }; });
+  document.querySelectorAll("[data-unfav]").forEach(function(b){ b.onclick=function(){
+    S.favTips=S.favTips.filter(function(x){return x.indexOf(b.dataset.unfav)!==0;}); save(); render(); }; });
+  document.querySelectorAll("[data-openchap]").forEach(function(b){ b.onclick=function(){ openChapter(JSON.parse(b.dataset.openchap)); }; });
+  document.querySelectorAll("[data-favverse]").forEach(function(b){ b.onclick=function(){
+    var v=JSON.parse(b.dataset.favverse); S.favVerses=S.favVerses||[];
+    if(!favVerseKey(v)) S.favVerses.push(v); save(); render(); }; });
+  document.querySelectorAll("[data-unfavverse]").forEach(function(b){ b.onclick=function(){
+    var v=JSON.parse(b.dataset.unfavverse);
+    S.favVerses=(S.favVerses||[]).filter(function(x){return !(x.b===v.b&&x.c===v.c&&x.v===v.v);});
+    save(); render(); }; });
+  if(q("vSurprise")) q("vSurprise").onclick=function(){ openChapter(NOTABLE[Math.floor(Math.random()*NOTABLE.length)]); };
+  if(q("vBook")){
+    var fillChapters=function(){
+      var b=q("vBook").value, bi=BIBLE_INDEX[b];
+      var n=(bi!==undefined && BIBLE)? BIBLE[bi].c.length:1;
+      var opts=""; for(var i=1;i<=n;i++) opts+='<option>'+i+'</option>';
+      q("vChapter").innerHTML=opts;
+    };
+    q("vBook").onchange=fillChapters; fillChapters();
+    if(q("vGo")) q("vGo").onclick=function(){ openChapter({b:q("vBook").value,c:Number(q("vChapter").value),v:0}); };
+  }
+
+  document.querySelectorAll("[data-mood]").forEach(function(b){ b.onclick=function(){
+    S.moods=S.moods||{}; var fresh=!S.moods[today()]; S.moods[today()]=b.dataset.mood; if(fresh) awardPoints(5); else save(); render(); checkBadges(); }; });
+  document.querySelectorAll("[data-moodreset]").forEach(function(b){ b.onclick=function(){ delete S.moods[today()]; save(); render(); }; });
+  document.querySelectorAll("[data-affirm]").forEach(function(b){ b.onclick=function(){
+    S.affirmed=S.affirmed||{}; if(!S.affirmed[today()]){ S.affirmed[today()]=true; awardPoints(5); confettiBurst(); toast("Declared! Believe every word"+(S.name?", "+S.name:"")+" ✨"); }
+    render(); checkMilestones(); }; });
+  document.querySelectorAll("[data-affnext]").forEach(function(b){ b.onclick=function(){
+    S.affShift=S.affShift||{}; S.affShift[today()]=(S.affShift[today()]||0)+1; save(); render(); }; });
+  document.querySelectorAll("[data-newverse]").forEach(function(b){ b.onclick=function(){ newVerse(); render(); }; });
+  document.querySelectorAll("[data-steps]").forEach(function(b){ b.onclick=function(){ addSteps(Number(b.dataset.steps)); render(); }; });
+  document.querySelectorAll("[data-goto]").forEach(function(b){ b.onclick=function(){ tab=b.dataset.goto; window.scrollTo(0,0); render(); }; });
+  if(q("stepAutoEnable")) q("stepAutoEnable").onclick=enableAutoSteps;
+  if(q("stepSet")) q("stepSet").onclick=function(){ var v=Math.max(0,Math.round(Number(q("stepTotal").value)||0));
+    var diff=v-stepsToday(); addSteps(diff); render(); toast("Steps set to "+v.toLocaleString()); };
+  if(q("stepGoalSave")) q("stepGoalSave").onclick=function(){ S.stepGoal=Math.max(500,Math.round(Number(q("stepGoal").value)||8000)); save(); render(); toast("Step goal saved"); };
+  if(q("declAdd")) q("declAdd").onclick=function(){ var v=q("declNew").value.trim(); if(!v){ toast("Type your declaration first"); return; }
+    S.myDecl=S.myDecl||[]; S.myDecl.push(v); save(); render(); toast("Added to your daily declarations 💛"); };
+  document.querySelectorAll("[data-decldel]").forEach(function(b){ b.onclick=function(){ S.myDecl.splice(Number(b.dataset.decldel),1); save(); render(); }; });
+  if(q("redoSetup")) q("redoSetup").onclick=function(){
+    if(!confirm("This walks you through the setup questions again and adds fresh starter habits based on your answers. Your existing habits, streaks and history stay untouched. Continue?")) return;
+    obStep=0; obData={name:S.name||"",cats:[],custom:"",count:5,time:S.reminderTime||"08:00"}; tab="onboard"; window.scrollTo(0,0); render(); };
+  if(q("stepsOn")) q("stepsOn").onclick=function(){ S.showSteps=true; save(); startAutoSteps(); render(); toast("Step tracker turned on"); };
+  if(q("stepsOff")) q("stepsOff").onclick=function(){ S.showSteps=false; stopAutoSteps(); save(); render(); toast("Step tracker turned off"); };
+  if(q("tNameSave")) q("tNameSave").onclick=function(){ var v=q("tName").value.trim(); if(!v){ toast("Type your name first"); return; }
+    S.name=v; save(); render(); toast("Lovely to meet you, "+v+"! 💛"); };
+  if(q("seed")) q("seed").onclick=function(){ STARTERS.forEach(function(s){ addHabit(s); }); render(); toast("Starter habits added"); };
+  document.querySelectorAll("[data-obcat]").forEach(function(b){ b.onclick=function(){
+    var i=Number(b.dataset.obcat); var idx=obData.cats.indexOf(i);
+    if(idx>=0){ obData.cats.splice(idx,1); b.classList.remove("on"); } else { obData.cats.push(i); b.classList.add("on"); }
+  }; });
+  document.querySelectorAll("[data-obcount]").forEach(function(b){ b.onclick=function(){
+    obData.count=Number(b.dataset.obcount);
+    document.querySelectorAll("[data-obcount]").forEach(function(x){x.classList.remove("on");}); b.classList.add("on"); }; });
+  function buildPlanFromOb(){
+    var pool=[];
+    obData.cats.forEach(function(i){ LIBRARY[i].items.forEach(function(it){ pool.push({name:it[0],icon:it[1]}); }); });
+    for(var i=pool.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=pool[i]; pool[i]=pool[j]; pool[j]=t; }
+    var custom=(obData.custom||"").split(",").map(function(s){return s.trim();}).filter(Boolean);
+    var chosen=pool.slice(0,Math.max(0,obData.count-custom.length));
+    custom.forEach(function(nm){ chosen.push({name:nm,icon:"⭐"}); });
+    if(!chosen.length){ STARTERS.forEach(function(s){ addHabit(s); }); }
+    else chosen.forEach(function(c){ addHabit({name:c.name,icon:c.icon}); });
+    if(obData.name) S.name=obData.name; S.reminderTime=obData.time||"08:00"; S.reminders=true; S.started=true; save();
+  }
+  /* Delegated handler for onboarding nav actions — attached once to #main, survives every
+     re-render since #main itself is never replaced, only its innerHTML. This avoids any
+     issue with re-finding freshly injected buttons by id after each step change. */
+  if(!window._obDelegated){
+    window._obDelegated=true;
+    document.getElementById("main").addEventListener("click", function(e){
+      var b=e.target.closest("[data-obact]"); if(!b) return;
+      var act=b.dataset.obact;
+      var nmI=document.getElementById("obName"), cuI=document.getElementById("obCustom"), tiI=document.getElementById("obTime");
+      if(nmI) obData.name=nmI.value.trim();
+      if(cuI) obData.custom=cuI.value;
+      if(tiI) obData.time=tiI.value||"08:00";
+      if(act==="next"){
+        if(obStep===0 && !obData.name){ toast("Tell me what to call you first 🙂"); if(nmI) nmI.focus(); return; }
+        if(obStep===0){ S.name=obData.name; save(); }
+        obStep=Math.min(4,obStep+1); window.scrollTo(0,0); render(); }
+      else if(act==="back"){ obStep=Math.max(0,obStep-1); render(); }
+      else if(act==="skip"){ STARTERS.forEach(function(s){ addHabit(s); }); S.started=true; save(); tab="today"; render(); }
+      else if(act==="go"){
+        obStep=5; render();
+        setTimeout(function(){ buildPlanFromOb(); obStep=0; tab="today"; render();
+          celebrate("🌱","Your plan is ready"+(S.name?", "+S.name:"")+"!","I picked habits from what you told me. Tick them off as you go, and I'll cheer you on."); },1100);
+      }
+    });
+  }
+  if(q("favTip")) q("favTip").onclick=function(){ var t=tipOfDay()[1]; var i=S.favTips.indexOf(t);
+    if(i>=0) S.favTips.splice(i,1); else S.favTips.push(t); save(); render(); };
+  if(q("favTip2")) q("favTip2").onclick=function(){ var t=tipOfDay()[1]; var i=S.favTips.indexOf(t);
+    if(i>=0) S.favTips.splice(i,1); else S.favTips.push(t); save(); render(); };
+  if(q("nFreq")) { q("nFreq").onchange=freqExtra; freqExtra(); }
+  if(q("createHabit")) q("createHabit").onclick=function(){
+    var n=q("nName").value.trim(); if(!n){ toast("Give it a name first"); return; }
+    var f=q("nFreq").value;
+    var obj={name:n, icon:q("nIcon").value||"⭐", cat:q("nCat").value, freq:f,
+      target:Math.max(1,Number(q("nTarget").value)||1), start:q("nStart").value||today(), note:q("nNote").value.trim(),
+      time:q("nTime").value||""};
+    if(f==="days") obj.days=pickedDays();
+    if(f==="week") obj.perWeek=Number((q("nPer")||{}).value||3);
+    addHabit(obj); if(obj.time) syncAlarmPlanNow(); toast("Habit added"); tab="today"; render();
+  };
+  if(q("saveWater")) q("saveWater").onclick=function(){ S.waterGoal=Math.max(1,Number(q("wGoal").value)||8); save(); render(); toast("Saved"); };
+  if(q("logEx")) q("logEx").onclick=function(){
+    S.exercise.push({id:uid(),kind:q("eKind").value,minutes:Math.max(1,Number(q("eMin").value)||0),
+      date:q("eDate").value||today(),note:q("eNote").value.trim()});
+    save(); render(); toast("Session saved"); checkBadges(); };
+  if(q("saveEGoal")) q("saveEGoal").onclick=function(){ S.exerciseGoal=Math.max(10,Number(q("eGoal").value)||150); save(); render(); toast("Goal saved"); };
+  if(q("saveName")) q("saveName").onclick=function(){ S.name=q("sName").value.trim(); save(); render(); toast("Saved"); };
+  if(q("sugSend")) q("sugSend").onclick=function(){
+    var t=q("sugText").value.trim(); if(!t){ toast("Write a message first"); return; }
+    sendSuggestion(t, q("sugName").value.trim()); q("sugText").value=""; q("sugName").value=""; };
+  if(q("adminBtn")) q("adminBtn").onclick=function(){ tab="admin"; render(); };
+  if(q("adminBack")) q("adminBack").onclick=function(){ tab="settings"; render(); };
+  if(q("signOutBtn")) q("signOutBtn").onclick=function(){
+    busy("signOutBtn",true);
+    cloudWrite().then(unregisterPush).then(function(){
+      var em=fbUser&&fbUser.email, dv=S.deviceId, th=S.theme;
+      forgetKey(em); S=JSON.parse(JSON.stringify(DEFAULTS)); S.deviceId=dv; S.theme=th; saveLocal();
+      obStep=0; tab="today"; return fbAuth.signOut();
+    }).catch(function(){ busy("signOutBtn",false); }); };
+  if(q("addAdminBtn")) q("addAdminBtn").onclick=function(){
+    var em=(q("newAdminEmail").value||"").trim().toLowerCase(); if(!em){ toast("Enter an email"); return; }
+    fbDb.collection("admins").doc(em).set({addedBy:fbUser.email,addedAt:new Date().toISOString()})
+      .then(function(){ toast("Admin added: "+em); q("newAdminEmail").value=""; })
+      .catch(function(){ toast("Could not add admin"); }); };
+  if(q("annSend")) q("annSend").onclick=function(){
+    var t=q("annText").value.trim(); if(!t){ toast("Write something first"); return; }
+    fbDb.collection("announcements").doc("current").set({text:t,date:new Date().toISOString()})
+      .then(function(){ toast("Posted"); }).catch(function(){ toast("Could not post"); }); };
+  if(q("annClear")) q("annClear").onclick=function(){
+    fbDb.collection("announcements").doc("current").delete()
+      .then(function(){ toast("Cleared"); }).catch(function(){ toast("Could not clear"); }); };
+  if(tab==="admin" && fbIsAdmin && fbDb){ loadAdminData(); loadAdminStats(); }
+  if(q("installBtn2")) q("installBtn2").onclick=function(){ document.getElementById("installBtn").click(); };
+  if(q("remOn")) q("remOn").onclick=function(){ S.reminders=true; save(); syncAlarmPlanNow(); render(); };
+  if(q("remOff")) q("remOff").onclick=function(){ S.reminders=false; save(); syncAlarmPlanNow(); render(); };
+  if(q("saveRem")) q("saveRem").onclick=function(){
+    S.reminderTime=q("remTime").value||"08:00"; save();
+    var chosen=S.reminderTime; toast("Saving alarm…");
+    syncAlarmPlanNow().then(function(ok){ toast(ok? "✅ Alarm saved for "+chosen : "Alarm time saved. It will sync when you are online."); });
+  };
+  if(q("permBtn")) q("permBtn").onclick=function(){
+    if(!("Notification" in window)){ toast(/iPhone|iPad/.test(navigator.userAgent)? "On iPhone, first add this app to your Home Screen, then open it from there." : "This browser can't show notifications."); return; }
+    Notification.requestPermission().then(function(p){
+      if(p!=="granted"){ toast("Notifications are blocked. You can allow them in your phone's settings."); return; }
+      if(!pushConfigured()){ toast("Notifications allowed"); return; }
+      toast("Setting up alarms on this phone…");
+      syncPush(true).then(function(ok){ toast(ok? "✅ Alarms are on. They'll arrive even when the app is closed." : "Couldn't switch on alarms right now. Try again when online."); render(); });
+    }); };
+  if(q("expJson")) q("expJson").onclick=exportJson;
+  if(q("expCsv")) q("expCsv").onclick=exportCsv;
+  if(q("importBtn")) q("importBtn").onclick=function(){ q("fileIn").click(); };
+  if(q("fileIn")) q("fileIn").onchange=function(e){
+    var f=e.target.files[0]; if(!f) return; var r=new FileReader();
+    r.onload=function(){ try{ var o=JSON.parse(r.result); S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),o); save(); render(); toast("Imported"); }
+      catch(err){ toast("That file could not be read"); } };
+    r.readAsText(f); };
+  if(q("wipe")) q("wipe").onclick=function(){
+    openDialog('<h2>Erase everything?</h2><p class="small">This removes all habits, water, exercise, badges and settings from this device. It cannot be undone.</p>'+
+      '<div class="row" style="margin-top:14px"><button class="btn" onclick="closeDialog()">Cancel</button>'+
+      '<button class="btn primary" id="wipeYes">Yes, erase</button></div>');
+    document.getElementById("wipeYes").onclick=function(){
+      localStorage.removeItem(KEY); S=load();
+      if(!S.deviceId) S.deviceId=uid()+uid();
+      save(); closeDialog(); tab=S.started?"today":"onboard"; render(); toast("Erased"); }; };
+}
+function freqExtra(){
+  var v=document.getElementById("nFreq").value, box=document.getElementById("freqExtra");
+  if(v==="days"){ box.innerHTML='<label class="f">Which days</label><div class="switch" id="dayPick">'+
+    DAYN.map(function(d,i){return '<button type="button" data-day="'+i+'">'+d+'</button>';}).join("")+'</div>';
+    box.querySelectorAll("[data-day]").forEach(function(b){ b.onclick=function(){ b.classList.toggle("on"); }; });
+  } else if(v==="week"){ box.innerHTML='<label class="f">Times per week</label><input id="nPer" type="number" min="1" max="7" value="3" />';
+  } else box.innerHTML="";
+}
+function pickedDays(){
+  var out=[]; document.querySelectorAll("#dayPick .on").forEach(function(b){ out.push(Number(b.dataset.day)); });
+  return out.length?out:[1,2,3,4,5];
+}
+function find(id){ for(var i=0;i<S.habits.length;i++) if(S.habits[i].id===id) return S.habits[i]; return null; }
+function addHabit(o){
+  S.habits.push({id:uid(), name:o.name, icon:o.icon||"⭐", cat:o.cat||"health", freq:o.freq||"daily",
+    days:o.days||null, perWeek:o.perWeek||null, target:o.target||1, note:o.note||"", time:o.time||"",
+    start:o.start||today(), order:S.habits.length, archived:false});
+  save();
+}
+function move(id,dir){
+  var list=activeHabits(), i=list.findIndex(function(x){return x.id===id;});
+  var j=i+dir; if(j<0||j>=list.length) return;
+  var a=list[i].order||i, b=list[j].order||j;
+  list[i].order=b; list[j].order=a;
+  list.forEach(function(x,k){ if(x.order===undefined) x.order=k; });
+  save(); render();
+}
+function editHabit(h){
+  openDialog('<h2>Edit habit</h2>'+
+    '<label class="f">Name</label><input id="eN" value="'+esc(h.name)+'" />'+
+    '<label class="f">Icon</label><input id="eI" value="'+esc(h.icon||"")+'" />'+
+    '<label class="f">Note</label><textarea id="eNo">'+esc(h.note||"")+'</textarea>'+
+    '<label class="f">Daily target</label><input id="eT" type="number" min="1" value="'+(h.target||1)+'" />'+
+    '<label class="f">Remind me at (optional)</label><input id="eTime" type="time" value="'+(h.time||"")+'" />'+
+    '<div class="row" style="margin-top:14px"><button class="btn" onclick="closeDialog()">Cancel</button>'+
+    '<button class="btn primary" id="eSave">Save</button>'+
+    '<button class="btn" id="eArch">Archive</button><button class="btn" id="eDel">Delete</button></div>');
+  document.getElementById("eSave").onclick=function(){
+    h.name=document.getElementById("eN").value.trim()||h.name;
+    h.icon=document.getElementById("eI").value;
+    h.note=document.getElementById("eNo").value.trim();
+    h.target=Math.max(1,Number(document.getElementById("eT").value)||1);
+    h.time=document.getElementById("eTime").value||"";
+    save(); syncAlarmPlanNow(); closeDialog(); render(); };
+  document.getElementById("eArch").onclick=function(){ h.archived=true; save(); syncAlarmPlanNow(); closeDialog(); render(); };
+  document.getElementById("eDel").onclick=function(){
+    S.habits=S.habits.filter(function(x){return x.id!==h.id;}); save(); syncAlarmPlanNow(); closeDialog(); render(); };
+}
+function pastDays(h){
+  var rows='';
+  for(var i=1;i<=14;i++){ var d=addDays(today(),-i);
+    rows+='<div class="item row"><span style="flex:1">'+d+' · '+DAYN[weekdayOf(d)]+'</span>'+
+      '<button class="btn sm" data-mark="'+d+'">'+(isDone(h,d)?"✓ done":"mark done")+'</button></div>'; }
+  openDialog('<h2>'+esc(h.name)+'</h2><p class="small">Tick a day you forgot to mark.</p><div class="list">'+rows+'</div>'+
+    '<div class="row" style="margin-top:14px"><button class="btn primary" onclick="closeDialog()">Close</button></div>');
+  document.querySelectorAll("[data-mark]").forEach(function(b){ b.onclick=function(){
+    var d=b.dataset.mark; setDone(h,d,!isDone(h,d)); b.textContent=isDone(h,d)?"✓ done":"mark done"; }; });
+}
+
+/* ---------- export ---------- */
+function download(name,text,type){
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([text],{type:type}));
+  a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+function exportJson(){ download("ese-habit-data-"+today()+".json", JSON.stringify(S,null,2),"application/json"); }
+function exportCsv(){
+  var rows=[["habit","date","status"]];
+  S.habits.forEach(function(h){
+    Object.keys(S.done[h.id]||{}).forEach(function(d){ rows.push([h.name,d,"done"]); });
+    Object.keys(S.skips[h.id]||{}).forEach(function(d){ rows.push([h.name,d,"skipped"]); });
+  });
+  Object.keys(S.water).forEach(function(d){ rows.push(["Water ("+S.waterUnit+")",d,S.water[d]]); });
+  S.exercise.forEach(function(e){ rows.push(["Exercise: "+e.kind,e.date,e.minutes+" min"]); });
+  var csv=rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(","); }).join("\n");
+  download("ese-habit-data-"+today()+".csv",csv,"text/csv");
+}
+
+/* ---------- reminders ----------
+   This is the in-app fallback while the page is open. Background alarms are delivered
+   separately through Firebase Cloud Messaging and the service worker. */
+function notify(title,body){
+  toast(body);
+  try{ if(!("Notification" in window) || Notification.permission!=="granted") return;
+    var opts={body:body, tag:"ese-"+title, renotify:true, requireInteraction:true, vibrate:[400,150,400,150,400]};
+    if("serviceWorker" in navigator && navigator.serviceWorker.controller){
+      navigator.serviceWorker.ready.then(function(r){ return r.showNotification(title,opts); })
+        .catch(function(){ try{ new Notification(title,opts); }catch(e){} });
+    } else new Notification(title,opts);
+  }catch(e){}
+}
+var firedToday={};
+try{ firedToday=JSON.parse(localStorage.getItem("ese.fired")||"{}")||{}; }catch(e){ firedToday={}; }
+function markFired(k){ firedToday[k]=1;
+  var keep={}, t=today(); Object.keys(firedToday).forEach(function(x){ if(x.indexOf(t)===0) keep[x]=1; });
+  firedToday=keep; try{ localStorage.setItem("ese.fired",JSON.stringify(firedToday)); }catch(e){} }
+/* Minutes since an HH:MM time today (negative = still to come). The open-app fallback
+   only catches the selected minute and the next two minutes; it never fires very stale alarms. */
+function minsSince(hhmm){ var p=String(hhmm||"").split(":"); if(p.length<2) return null;
+  var t=new Date(); t.setHours(+p[0],+p[1],0,0); return Math.floor((Date.now()-t.getTime())/60000); }
+function dueNow(hhmm){ var m=minsSince(hhmm); return m!==null && m>=0 && m<=2; }
+function checkAlarms(){
+  if(!S.reminders || !S.started) return;
+  var d=today(), p=dayProgress(d);
+  var dailyKey=d+"a:"+(S.reminderTime||"08:00");
+  if(dueNow(S.reminderTime||"08:00") && !firedToday[dailyKey]){
+    markFired(dailyKey); notify((new Date().getHours()<12?"Good morning":"Hi")+(S.name?", "+S.name:"")+" ☀️", companionMessage());
+    notify("🗣️ Today's declaration", todaysAffirmation());
+    notify("💡 Today's health tip", tipOfDay()[1]);
+  }
+  if(dueNow("18:00") && S.showSteps!==false && stepsToday()<(S.stepGoal||8000) && !firedToday[d+"s"]){
+    markFired(d+"s"); notify("👟 Step check", "You're at "+stepsToday().toLocaleString()+" steps. A short walk gets you closer to "+(S.stepGoal||8000).toLocaleString()+".");
+  }
+  if(dueNow("19:30") && p.total && p.done<p.total && !firedToday[d+"b"]){
+    markFired(d+"b"); notify("A gentle nudge", "Still time for one habit today. "+pick(PUSH));
+  }
+  /* per-habit alarms: an hour before, and right at the time */
+  activeHabits().forEach(function(h){
+    if(!h.time || !dueOn(h,d) || isSatisfied(h,d)) return;
+    var m=minsSince(h.time); if(m===null) return;
+    var hourKey=d+h.id+"h1:"+h.time, nowKey=d+h.id+"now:"+h.time;
+    if(m>=-60 && m<=-50 && !firedToday[hourKey]){ markFired(hourKey); notify("⏰ Coming up in an hour", h.name); }
+    if(m>=0 && m<=2 && !firedToday[nowKey]){ markFired(nowKey); notify("⏰ Time for: "+h.name, "Your friendly nudge — you've got this."); }
+  });
+}
+/* Line the checks up with the start of each minute so alarms ring at :00, not up to 30s late. */
+function alarmLoop(){ try{ checkAlarms(); }catch(e){} setTimeout(alarmLoop, 60000-(Date.now()%60000)+100); }
+setTimeout(alarmLoop, 60000-(Date.now()%60000)+100);
+setInterval(function(){ try{ checkAlarms(); }catch(e){} },15000);
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden){ stopAutoSteps(); }
+  else { try{ checkAlarms(); }catch(e){} startAutoSteps(); }
+});
+window.addEventListener("focus",function(){ try{ checkAlarms(); }catch(e){} startAutoSteps(); });
+
+/* ---------- first run ---------- */
+function boot(){
+  if(!S.deviceId){ S.deviceId=uid()+uid(); saveLocal(); }
+  applyTheme();
+  if(fbReady()){
+    appPhase="loading";
+    render();
+    fbInit();
+  } else {
+    appPhase="app";
+    if(!S.started){ tab="onboard"; }
+    var last=S.lastOpen; S.lastOpen=today(); saveLocal();
+    render();
+    startAutoSteps();
+    if(S.started && last!==today()) setTimeout(function(){ toast(companionMessage()); },700);
+  }
+}
+window.closeDialog=closeDialog;
+boot();
+</script>
+</body>
+</html>
