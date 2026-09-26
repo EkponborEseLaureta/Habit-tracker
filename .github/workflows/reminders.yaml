@@ -4,6 +4,8 @@ name: Send alarms
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [tick]
   schedule:
     - cron: "*/10 * * * *"   # backup, in case the minute timer ever stops
 
@@ -23,12 +25,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: Install
         run: npm install --no-audit --no-fund --silent
+
       - name: Send due alarms
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node alarm-sender.js
+
       - name: Keep the timer awake
         run: |
           last=$(git log -1 --format=%ct)
